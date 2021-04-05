@@ -1,37 +1,25 @@
-#include "vector.cpp"
-#include "sphere.cpp"
 #pragma once
+#include "vector.cpp"
+//#include "sphere.cpp"
+
 
 class Ray {
 
 public:
-    explicit Ray(Vector O, Vector u){ 
-    O = O;
-    u = u;
+    explicit Ray(Vector v1, Vector v2){ 
+    O = v1;
+    u = v2;
     };
     
     Vector getO(){ return O;}
 
-    Vector getu(){ return u;}
+    Vector getu(){ 
+        u.normalize();
+        //u.print_vector();
+        //printf("%f\n",u.norm());
+        return u;}
 private :
     Vector O;
     Vector u;
 };
 
-struct point
-{
-    double x;
-    double y;
-    double z;
-};
-
-struct Intersection
-{
-    bool intersects;
-    point p
-
-};
-
-Intersection intersect(Ray r,Sphere s){
-    
-}
