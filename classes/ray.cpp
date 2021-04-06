@@ -15,8 +15,6 @@ public:
 
     Vector getu(){ 
         u.normalize();
-        //u.print_vector();
-        //printf("%f\n",u.norm());
         return u;}
 private :
     Vector O;

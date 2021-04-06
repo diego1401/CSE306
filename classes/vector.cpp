@@ -10,7 +10,6 @@ struct point
     double y;
     double z;
 };
-
 class Vector { 
 public :
     explicit Vector(double x = 0. , double y = 0. , double z = 0.){ 
@@ -127,12 +126,3 @@ Vector cross(const Vector& a, const Vector& b) {
                   a[0] * b[1] - a[1] * b[0]);
     }
 
-
-// int main() {
-//     Vector myVector1 (1. , 2. , 3.) ; 
-//     printf("hola %f \n", myVector1.norm() );
-//     myVector1.normalize();
-//     printf ("hola %f \n",myVector1[0]);   
-//     printf("hola %f \n", myVector1.norm() );
-    
-// }

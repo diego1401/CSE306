@@ -1,10 +1,11 @@
 #include "sphere.hpp"
 
 
-Sphere::Sphere(Vector c, double r,Vector rho){ 
+Sphere::Sphere(Vector c, double r,Vector rho,bool flag){ 
         C = c;
         R = r;
         albedo = rho * (1./255.);
+        mirror = flag;
         };
 
 Intersection Sphere::intersect(Ray r){
@@ -32,7 +33,7 @@ Intersection Sphere::intersect(Ray r){
                 return inter;
                 }
             else{
-                if (t1>0){ 
+                if (t1>=0){ 
                     inter.length = t1;
                     inter.P  += t1*u;}
                 else     { 
@@ -45,8 +46,19 @@ Intersection Sphere::intersect(Ray r){
         
         inter.N.normalize();
         inter.albedo = albedo; // initialize albedo
+        inter.sphere_id = sphere_id;
+        inter.incoming_direction = u;
         return inter;
     };
 
 double Sphere::get_R(){return R;}
+
 Vector Sphere::get_albedo(){return albedo;}
+
+bool Sphere::is_mirror(){return mirror;}
+
+Vector direction(Vector Start, Vector P){
+    Vector omega = Start - P;
+    omega.normalize();
+    return omega;
+}
