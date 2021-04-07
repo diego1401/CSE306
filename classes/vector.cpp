@@ -33,7 +33,7 @@ public :
     }
 
     double norm(){
-        return pow((pow(coords[0],2) + pow(coords[1],2) + pow(coords[2],2)),0.5);
+        return sqrt((pow(coords[0],2) + pow(coords[1],2) + pow(coords[2],2)));
     }
 
     void normalize(){
@@ -41,7 +41,6 @@ public :
         if (norm){
         coords[0] /= norm; coords[1] /= norm; coords[2] /= norm;
         }
-        //return *this;
     }
 
     point give_point(){

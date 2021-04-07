@@ -5,42 +5,47 @@ Scene::Scene(){
     //camera and light source
     Vector q(0,0,55);
     Vector light(-10,20,40);
-    eps = pow(10,-6);
+
+    eps = pow(10,-5);
     Q = q;
     S = light;
     I = 2*pow(10,10);
+    refractive_index_air = 1.0;
     //All the walls have the same radius
     double R = 940.;
     double dist = 1000;
     //colors
     Vector white(255,255,255);
+    Vector blue(0,0,255);
     Vector red(255,0,0);
-    Vector cyan(224,255,255);
-    Vector green(0,128,0);
-    Vector pink(255,182,193);
-    Vector color1(255,230,100);
+    Vector purple(255,0,255);
+    Vector green(0,255,0);
+    Vector cyan(0,255,255);
+    Vector yellow(255,255,0);
     //State the center of the walls
     Vector wall_t (0,dist,0); //top wall
-    
-    Sphere top_wall(wall_t,R,white,false);
+    Sphere top_wall(wall_t,R,red);
 
-    Vector wall_bot (0,-dist+40,0); //bottom wall
-    Sphere bottom_wall(wall_bot,R,red,false);
+    Vector wall_bot (0,-dist,0); //bottom wall
+    Sphere bottom_wall(wall_bot,R+50,blue);
 
-    Vector wall_f (0,0,-dist); //front wall
-    Sphere front_wall(wall_f,R,green,true);
+    Vector wall_f (0,0,-dist-10); //front wall
+    Sphere front_wall(wall_f,R,yellow);
 
     Vector wall_b (0,0,dist); //back wall
-    Sphere back_wall(wall_b,R,pink,false);
+    Sphere back_wall(wall_b,R,cyan);
 
     Vector wall_l (dist,0,0); //left wall
-    Sphere left_wall(wall_l,R,color1,false);
+    Sphere left_wall(wall_l,R,green);
 
     Vector wall_r (-dist,0,0); //right wall
-    Sphere right_wall(wall_r,R,pink,false);
+    Sphere right_wall(wall_r,R,purple);
     // Creating and pushing the first sphere of our interest
-    Vector center (0,0,0); //ball
-    Sphere center_sphere(center,10,white,false);
+    Vector center (-15,0,0); //ball
+    Sphere center_sphere(center,10,white,true);
+
+    Vector center2 (15,0,0); //ball
+    Sphere center_sphere2(center2,10,white,true);
 
     // We push the walls into our list of spheres
     left_wall.sphere_id = 0;
@@ -57,9 +62,11 @@ Scene::Scene(){
     s.push_back(front_wall);
     back_wall.sphere_id = 6;
     s.push_back(back_wall);
+    center_sphere2.sphere_id = 7;
+    s.push_back(center_sphere2);
     };
 
-Sphere Scene::get_center_sphere(){return s[0];}
+Sphere Scene::get_center_sphere(){return s[2];}
 
 Vector Scene::Lambertian(Vector rho,Intersection inter){
         //Preparing parameters
@@ -88,7 +95,7 @@ Intersection Scene::intersect(Ray r){
         for(std::vector<Sphere>::iterator it = s.begin(); it != s.end(); ++it) { 
             Intersection tmp_inter = (*it).intersect(r);
             if(tmp_inter.intersects){
-                tmp = tmp_inter.P.norm();
+                tmp = tmp_inter.length;
                 if(tmp < d){
                     d = tmp;
                     inter = tmp_inter;
@@ -98,23 +105,41 @@ Intersection Scene::intersect(Ray r){
         return inter;
     }
 
-Vector Scene::getColor(const Ray& ray, int ray_depth){
-    if (ray_depth >= 0){
+double Scene::get_refr_index_air(){return refractive_index_air;}
 
+Vector Scene::getColor(const Ray& ray, int ray_depth,double refr_index){
+    if (ray_depth >= 0){
     Intersection inter = intersect(ray);
     if (inter.intersects){ 
+        Vector omega = inter.incoming_direction;
+        omega.normalize();
+        double n2 = s[inter.sphere_id].get_refract();
         if (s[inter.sphere_id].is_mirror() ) 
         {
-        Vector omega = direction(inter.incoming_direction,inter.P);
-        omega.normalize();
-        if(inter.N[0] * inter.incoming_direction[0] >0){ // if they are the same sign we change
-            //since N should point towards the incoming ray
-            omega *= (-1);
-        }
         Vector omega_r = omega - 2* dot(omega,inter.N) * inter.N;
         Ray reflected_ray(inter.P + eps*inter.N,omega_r);
-        return getColor(reflected_ray,(ray_depth-1)); 
+        return getColor(reflected_ray,(ray_depth-1),n2); 
         }
+        else if (n2 != -1)
+        {   
+            //we build omega_T
+            if (dot(omega,inter.N)>0){
+                n2 = refractive_index_air;
+                inter.N *= -1;
+            }
+
+            Vector omega_T = refr_index/n2 * (omega - dot(omega,inter.N)*inter.N);
+            //we build omega_N
+            double delta = 1 - pow(refr_index/n2,2) * (1-pow(dot(omega,inter.N),2));
+            // printf("%f\n",delta);
+            Vector omega_N = -1*inter.N * sqrt(delta);
+            //We build omega_t
+            Vector omega_t = omega_T + omega_N;
+            omega_t.normalize();
+            Ray reflected_ray(inter.P - eps*inter.N,omega_t);
+            return getColor(reflected_ray,(ray_depth-1),n2); 
+        }
+        
         else{
             return Lambertian(inter.albedo,inter);
         } 

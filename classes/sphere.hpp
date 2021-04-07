@@ -20,13 +20,15 @@ private:
     double R;
     Vector albedo;
     bool mirror;
+    double refract_ind;
     
 public:
     int sphere_id;
-    explicit Sphere(Vector c,double r,Vector rho,bool mirror);
+    explicit Sphere(Vector c,double r,Vector rho,bool mirror,double n);
     Intersection intersect(Ray r);
     bool is_mirror();
     double get_R();
+    double get_refract();
     Vector get_albedo();
 };
 

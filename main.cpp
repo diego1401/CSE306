@@ -9,6 +9,7 @@
 
 //include my classes
 #include "classes/scene.cpp"
+#include <chrono>
 
 Vector pixel_to_coordinates(Vector Q, int W, int H,double alpha, int x,int y){
     // point q = Q.give_point();
@@ -19,16 +20,19 @@ Vector pixel_to_coordinates(Vector Q, int W, int H,double alpha, int x,int y){
 }
 
 int main() {
+    // auto start = std::chrono::high_resolution_clock::now();
     int W = 512;
     int H = 512;
+    // int W = 2560;
+    // int H = 1600;
     //parameters
-    int max_path_length = 5;
+    int max_path_length = 20;
     double alpha = M_PI/3; // pi/4
     double gamma = 2.2;
     Scene scene;
     Vector Q = scene.get_Q();
     Vector S = scene.get_S();
-    
+    double n_air = scene.get_refr_index_air();
     std::vector<unsigned char> image(W*H * 3, 0);
     for (int i = 0; i < H; i++) {
         for (int j = 0; j < W; j++) {
@@ -41,14 +45,17 @@ int main() {
             q = (coord-Q);
             q.normalize();
             Ray r(Q,q);
-            Vector color = scene.getColor(r, max_path_length);
+            Vector color = scene.getColor(r, max_path_length,n_air);
             color = pow(color,1./gamma);
             image[i*W*3+j*3 + 0] = std::min(255,int(color[0]));
             image[i*W*3+j*3 + 1] = std::min(255,int(color[1]));
             image[i*W*3+j*3 + 2] = std::min(255,int(color[2]));
         }
     }
-    stbi_write_png("image.png", W, H, 3, &image[0], 0);
+    stbi_write_png("image.png", W, H, 3, &image[0], 0); 
+    // auto stop = std::chrono::high_resolution_clock::now();
+    // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    // printf("Time: %f\n",duration.count());
  
     return 0;
 }

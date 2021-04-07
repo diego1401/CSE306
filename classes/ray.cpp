@@ -13,9 +13,7 @@ public:
     
     Vector getO(){ return O;}
 
-    Vector getu(){ 
-        u.normalize();
-        return u;}
+    Vector getu(){return u;}
 private :
     Vector O;
     Vector u;

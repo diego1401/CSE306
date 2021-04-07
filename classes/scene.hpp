@@ -11,8 +11,9 @@ public:
     Vector Lambertian(Vector rho,Intersection inter);
     Vector get_Q();
     Vector get_S();
+    double get_refr_index_air();
     Intersection intersect(Ray r);
-    Vector getColor(const Ray& ray, int ray_depth);
+    Vector getColor(const Ray& ray, int ray_depth, double refr_index);
 
 private :
     std::vector<Sphere> s;
@@ -20,4 +21,5 @@ private :
     Vector S;
     double I;
     double eps;
+    double refractive_index_air;
 };
