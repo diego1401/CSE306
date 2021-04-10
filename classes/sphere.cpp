@@ -1,13 +1,18 @@
 #include "sphere.hpp"
 
 
-Sphere::Sphere(Vector c, double r,Vector rho,bool flag=false,double n=-1.){ 
+Sphere::Sphere(Vector c, double r,Vector rho,bool flag=false,double n=-10.){ 
         C = c;
         R = r;
         albedo = rho * (1./255.);
         mirror = flag;
-        refract_ind = n; // -1 means no refraction
+        refract_ind = n; // 0 means no refraction
         };
+
+double Sphere::get_R(){return R;}
+bool Sphere::is_mirror(){return mirror;}
+double Sphere::get_refract(){return refract_ind;}
+Vector Sphere::get_albedo(){return albedo;}
 
 Intersection Sphere::intersect(Ray r){
         Vector u = r.getu();
@@ -49,16 +54,9 @@ Intersection Sphere::intersect(Ray r){
         inter.albedo = albedo; // initialize albedo
         inter.sphere_id = sphere_id;
         inter.incoming_direction = r.getu();
+        // inter.incoming_direction.normalize();
         return inter;
     };
-
-double Sphere::get_R(){return R;}
-
-Vector Sphere::get_albedo(){return albedo;}
-
-bool Sphere::is_mirror(){return mirror;}
-
-double Sphere::get_refract(){return refract_ind;}
 
 Vector direction(Vector Start, Vector P){
     Vector omega = P - Start;

@@ -2,14 +2,16 @@
 #include <stdio.h>      /* printf */
 #include <iostream>
 #include <math.h>       /* pow */
+#include <stdlib.h>     /* srand, rand */
 
 
-struct point
-{
-    double x;
-    double y;
-    double z;
-};
+// struct point
+// {
+//     double x;
+//     double y;
+//     double z;
+// };
+
 class Vector { 
 public :
     explicit Vector(double x = 0. , double y = 0. , double z = 0.){ 
@@ -19,7 +21,7 @@ public :
     };
     //useful functions
     void print_vector(){
-        std::cout<< coords[0] << " " << coords[1] << " " << coords[2] << std::endl;
+        printf("(%f,%f,%f)\n",coords[0],coords[1],coords[2]);
     }
     // Vector operations
     Vector& operator+=(const Vector& b) {
@@ -42,15 +44,6 @@ public :
         coords[0] /= norm; coords[1] /= norm; coords[2] /= norm;
         }
     }
-
-    point give_point(){
-        point p;
-        p.x = coords[0];
-        p.y = coords[1];
-        p.z = coords[2];
-        return p;
-    }
-    //Arithmetic
     Vector& operator+=(const double b) {
     coords[0] += b; coords[1] += b; coords[2] += b;
     return *this; 
@@ -73,17 +66,7 @@ public :
 
 private :
     double coords[3];
-    double albedo[3];
 };
-
-//Arithmetic operations
-Vector operator+(const Vector& a, const double b){
-    return Vector(a[0] + b , a[1] + b , a[2] + b); 
-    }
-
-Vector operator+(const double b,const Vector& a){
-    return Vector(a[0] + b , a[1] + b , a[2] + b); 
-    }
 
 //CAREFUL: We need to declare the symmetry
 Vector operator*(const Vector& a, const double b){
@@ -92,14 +75,6 @@ Vector operator*(const Vector& a, const double b){
 
 Vector operator*(const double b,const Vector& a){
     return Vector(a[0] * b , a[1] * b , a[2] * b); 
-    }
-
-Vector operator-(const Vector& a, const double b){
-    return Vector(a[0] - b , a[1] - b , a[2] - b); 
-    }
-
-Vector operator-(const double b,const Vector& a){
-    return Vector(a[0] - b , a[1] - b , a[2] - b); 
     }
 
 Vector pow(const Vector& a,double exp){
