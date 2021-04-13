@@ -1,4 +1,5 @@
 #include "scene.hpp"
+double pow_5(double x){return x*x*x*x*x;}
 
 Scene::Scene(){ 
     //camera and light source
@@ -9,7 +10,8 @@ Scene::Scene(){
     Q = q;
     S = light;
     I = 2*pow(10,10);
-    samples = 100;
+    samples = 1000;
+    // samples = 1;
     refractive_index_air = 1.0003;
     //All the walls have the same radius
     double R = 940.;
@@ -41,7 +43,7 @@ Scene::Scene(){
     Vector wall_r (-dist,0,0); //right wall
     Sphere right_wall(wall_r,R,purple);
     // Creating and pushing the first sphere of our interest
-    Vector center (-20,0,0); //ball
+    Vector center (-21,0,0); //ball
     Sphere center_sphere(center,10,white,true);
     // Sphere center_sphere(center,10,white);
 
@@ -53,7 +55,7 @@ Scene::Scene(){
     // Hollow sphere
     Vector center3 (20,0,0); //ball
     Sphere center_sphere3(center3,10,white,false,1.5);
-    Sphere center_sphere4(center3,9.8,white,false,refractive_index_air);
+    Sphere center_sphere4(center3,9.5,white,false,refractive_index_air);
     // Sphere center_sphere3(center3,10,white);
     // Sphere center_sphere4(center3,9.8,white);
 
@@ -85,7 +87,6 @@ Scene::Scene(){
 Vector Scene::get_Q(){return Q;};
 Vector Scene::get_S(){return S;};
 double Scene::get_refr_index_air(){return refractive_index_air;}
-
 Vector Scene::Lambertian(Vector rho,Intersection inter){
         //Preparing parameters
         double d = (S-inter.P).norm();
@@ -95,11 +96,10 @@ Vector Scene::Lambertian(Vector rho,Intersection inter){
         Intersection inter_visible = intersect(visible);
         Vector L;
         if (!inter_visible.intersects or (inter_visible.length>d)){
-        L = I /(4* pow(M_PI*d,2)) * rho * (std::max(dot(inter.N,omega),0.0));
+        L = I / (4* square(M_PI*d)) * rho * (std::max(dot(inter.N,omega),0.0));
         }
         return L;
     }
-
 Intersection Scene::intersect(Ray r){
         double tmp = 0;
         Intersection inter;
@@ -117,79 +117,65 @@ Intersection Scene::intersect(Ray r){
         }
         return inter;
     }
-
+Ray Scene::reflect(Vector omega_i,Intersection inter){
+    Vector omega_r = omega_i - 2* dot(omega_i,inter.N) * inter.N;
+    Ray reflected_ray(inter.P + eps*inter.N,omega_r);
+    return reflected_ray;
+}
+Ray Scene::refract(Vector omega,Intersection& inter,double n1,double& n2){
+    // We need to pass n2 by reference since it can be subject to change
+        //we build omega_T
+        // if (inter.sphere_id == 9) inter.N *= -1.;
+        if (dot(omega,inter.N)>0){
+            n2 = refractive_index_air;
+            inter.N *= -1.;
+        }
+        double ratio = n1/n2;
+        double d = dot(omega,inter.N);
+        Vector omega_T = ratio * (omega - d*inter.N);
+        //we build omega_N
+        double delta = 1 - square(ratio) * (1-square(d)) ;
+        if (delta <0 ){ // case of total reflection
+            return reflect(omega,inter);
+        }
+        Vector omega_N = -1*inter.N * sqrt(delta);
+        //We build omega_t
+        Vector omega_t = omega_T + omega_N;
+        omega_t.normalize();
+        Ray reflected_ray(inter.P - eps*inter.N,omega_t);
+        
+        return reflected_ray;
+}
 Vector Scene::getColor(const Ray& ray, int ray_depth,double refr_index){
     if (ray_depth >= 0){
-    Intersection inter = intersect(ray);
-    if (inter.intersects){ 
-        Vector omega = inter.incoming_direction;
-        double n2 = s[inter.sphere_id].get_refract();
-        
-        if (s[inter.sphere_id].is_mirror()) 
-        {
-        Vector omega_r = omega - 2* dot(omega,inter.N) * inter.N;
-        Ray reflected_ray(inter.P + eps*inter.N,omega_r);
-        return getColor(reflected_ray,(ray_depth-1),refractive_index_air); 
-        }
-        else if (n2>0.) // sphere is refractive
-        {
-            double k0 = pow((refr_index-n2),2)/pow((refr_index+n2),2);
-            double R = k0 + (1-k0) * pow(1-abs(dot(inter.N,omega)),5);
-            double u = ((double) rand() / (RAND_MAX));
-            assert(u<1);
-            assert(0<u);
-            if (u>R) //refraction
+        Intersection inter = intersect(ray);
+        if (inter.intersects){ 
+            Vector omega = inter.incoming_direction;
+            double n2 = s[inter.sphere_id].get_refract();
+
+            if (s[inter.sphere_id].is_mirror()) // we reflect
             {
-                    //we build omega_T
-                if (dot(omega,inter.N)>0){
-                    n2 = refractive_index_air;
-                    inter.N *= -1.;
+            return getColor(reflect(omega,inter),(ray_depth-1),refr_index); 
+            }
+            else if (n2>0.) // sphere is refractive
+            {
+                double k0 = square(refr_index-n2)/square(refr_index+n2);
+                double R = k0 + (1-k0) * pow_5(1-abs(dot(inter.N,omega)));
+                double u = ((double) rand() / (RAND_MAX));
+                // double u = 1;
+                if (u>R) //refraction
+                {
+                    return getColor(refract(omega,inter,refr_index,n2),(ray_depth-1),n2); 
                 }
-                double ratio = refr_index/n2;
-                Vector omega_T = ratio * (omega - dot(omega,inter.N)*inter.N);
-                //we build omega_N
-                double delta = std::max(0.,1 - pow(ratio,2) * (1-pow(dot(omega,inter.N),2)));
-                Vector omega_N = -1*inter.N * sqrt(delta);
-                //We build omega_t
-                Vector omega_t = omega_T + omega_N;
-                omega_t.normalize();
-                Ray reflected_ray(inter.P - eps*inter.N,omega_t);
-                return getColor(reflected_ray,(ray_depth-1),n2); 
+                else //reflection
+                {
+                    return getColor(reflect(omega,inter),(ray_depth-1),refr_index); 
+                }
             }
-            else //reflection
-            {
-                Vector omega_r = omega - 2* dot(omega,inter.N) * inter.N;
-                Ray reflected_ray(inter.P + eps*inter.N,omega_r);
-                return getColor(reflected_ray,(ray_depth-1),refractive_index_air); 
-            }
-
-
+            else{
+                return Lambertian(inter.albedo,inter);
+            } 
         }
-        /*
-        else if (n2 >0.) //so we have a reflective sphere
-        {   
-            
-            //we build omega_T
-            if (dot(omega,inter.N)>0){
-                n2 = refractive_index_air;
-                inter.N *= -1.;
-            }
-            double ratio = refr_index/n2;
-            Vector omega_T = ratio * (omega - dot(omega,inter.N)*inter.N);
-            //we build omega_N
-            double delta = std::max(0.,1 - pow(ratio,2) * (1-pow(dot(omega,inter.N),2)));
-            Vector omega_N = -1*inter.N * sqrt(delta);
-            //We build omega_t
-            Vector omega_t = omega_T + omega_N;
-            omega_t.normalize();
-            Ray reflected_ray(inter.P - eps*inter.N,omega_t);
-            return getColor(reflected_ray,(ray_depth-1),n2); 
-        }
-        */
-        else{
-            return Lambertian(inter.albedo,inter);
-        } 
-    }
     }
     return Vector(0.,0.,0.); // we terminate when ray_depth is less than 0
 };

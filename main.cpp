@@ -35,6 +35,8 @@ int main() {
     Vector S = scene.get_S();
     double n_air = scene.get_refr_index_air();
     int samples = scene.samples;
+    //to make the averages
+    double i1,i2,i3;
     std::vector<unsigned char> image(W*H * 3, 0);
     for (int i = 0; i < H; i++) {
         for (int j = 0; j < W; j++) {
@@ -47,16 +49,17 @@ int main() {
             q = (coord-Q);
             q.normalize();
             Ray r(Q,q);
-            double i1 = 0;double i2 = 0;double i3 = 0;
+            i1 = 0;i2 = 0;i3 = 0;
             for (int i = 0;i<samples;i++){
                 Vector color = scene.getColor(r, max_path_length,n_air);
-                color = pow(color,1./gamma);
+                // color = pow(color,1./gamma);
                 i1+= color[0];i2+= color[1];i3+= color[2];
             }
+            i1 /= samples;i2 /= samples;i3 /= samples;
 
-            image[i*W*3+j*3 + 0] = std::min(255,int(i1/samples));
-            image[i*W*3+j*3 + 1] = std::min(255,int(i2/samples));
-            image[i*W*3+j*3 + 2] = std::min(255,int(i3/samples));
+            image[i*W*3+j*3 + 0] = std::min(255,int(pow(i1,1./gamma)));
+            image[i*W*3+j*3 + 1] = std::min(255,int(pow(i2,1./gamma)));
+            image[i*W*3+j*3 + 2] = std::min(255,int(pow(i3,1./gamma)));
         }
     }
     stbi_write_png("image.png", W, H, 3, &image[0], 0); 

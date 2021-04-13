@@ -10,6 +10,8 @@ public:
     explicit Scene();
     double get_refr_index_air();
     Intersection intersect(Ray r);
+    Ray reflect(Vector omega_i,Intersection inter);
+    Ray refract(Vector omega_i,Intersection& inter,double n1,double& n2);
     Vector Lambertian(Vector rho,Intersection inter); 
     Vector get_Q();
     Vector get_S();

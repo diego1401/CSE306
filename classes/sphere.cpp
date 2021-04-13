@@ -1,7 +1,7 @@
 #include "sphere.hpp"
 
 
-Sphere::Sphere(Vector c, double r,Vector rho,bool flag=false,double n=-10.){ 
+Sphere::Sphere(Vector c, double r,Vector rho,bool flag=false,double n=-100.){ 
         C = c;
         R = r;
         albedo = rho * (1./255.);
@@ -19,7 +19,7 @@ Intersection Sphere::intersect(Ray r){
         u.normalize();
         Vector O = r.getO();
         double t = dot(u,C-O);
-        double delta = pow(t,2) - ( pow((O-C).norm(),2) - pow(R,2));
+        double delta = square(t) - ( square( (O-C).norm() ) - square(R));
 
         Intersection inter;
         

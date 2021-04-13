@@ -5,12 +5,7 @@
 #include <stdlib.h>     /* srand, rand */
 
 
-// struct point
-// {
-//     double x;
-//     double y;
-//     double z;
-// };
+double square(double x){return x*x;}
 
 class Vector { 
 public :
@@ -35,7 +30,7 @@ public :
     }
 
     double norm(){
-        return sqrt((pow(coords[0],2) + pow(coords[1],2) + pow(coords[2],2)));
+        return sqrt((square(coords[0]) + square(coords[1]) + square(coords[2])));
     }
 
     void normalize(){
