@@ -19,7 +19,7 @@ Intersection Sphere::intersect(Ray r){
         u.normalize();
         Vector O = r.getO();
         double t = dot(u,C-O);
-        double delta = square(t) - ( square( (O-C).norm() ) - square(R));
+        double delta = square(t) - ( (O-C).norm_squared() - square(R));
 
         Intersection inter;
         
@@ -54,7 +54,6 @@ Intersection Sphere::intersect(Ray r){
         inter.albedo = albedo; // initialize albedo
         inter.sphere_id = sphere_id;
         inter.incoming_direction = r.getu();
-        // inter.incoming_direction.normalize();
         return inter;
     };
 

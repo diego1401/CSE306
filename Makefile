@@ -1,8 +1,9 @@
-CXX = g++
+CXX = g++-10
 OBJECTS = main.o 
+FLAGS = -O3 -fopenmp -lpthread 
 
 exec:  $(OBJECTS)
-	$(CXX) -O3 main.cpp  -o exec 
+	$(CXX) $(FLAGS) main.cpp -o exec 
 	
 clean :
 	rm main.o exec

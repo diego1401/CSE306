@@ -4,8 +4,10 @@
 #include <math.h>       /* pow */
 #include <stdlib.h>     /* srand, rand */
 
-
+//functions to simplify computations
 double square(double x){return x*x;}
+
+double pow_5(double x){return x*x*x*x*x;}
 
 class Vector { 
 public :
@@ -31,6 +33,9 @@ public :
 
     double norm(){
         return sqrt((square(coords[0]) + square(coords[1]) + square(coords[2])));
+    }
+    double norm_squared(){
+        return (square(coords[0]) + square(coords[1]) + square(coords[2]));
     }
 
     void normalize(){
@@ -85,6 +90,9 @@ Vector operator-(const Vector& a, const Vector &b){
     return Vector(a[0] - b[0] , a[1] - b[1] , a[2] - b[2]); 
     }
 
+Vector element_wise_product(const Vector& a, const Vector &b){
+    return Vector(a[0] * b[0] , a[1] * b[1] , a[2] * b[2]); 
+    }
 double dot(const Vector& a, const Vector& b) { 
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
     }

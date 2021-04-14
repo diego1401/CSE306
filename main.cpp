@@ -11,7 +11,15 @@
 #include "classes/scene.cpp"
 #include <chrono>
 
-Vector pixel_to_coordinates(Vector Q, int W, int H,double alpha, int x,int y){
+double spread = 0.5; // or 0.25?
+void boxMuller(double stdev , double &x, double &y) { 
+    double r1 = uniform ( engine ) ;
+    double r2 = uniform ( engine ) ;
+    x= sqrt(-2 *log(r1))*cos(2 * M_PI*r2)*stdev *spread; 
+    y= sqrt(-2 *log(r1))*sin(2 * M_PI*r2)*stdev *spread;
+}
+
+Vector pixel_to_coordinates(Vector Q, int W, int H,double alpha, double x,double y){
     double vx = Q[0] + x + 0.5 - W/2;
     double vy = Q[1] + y + 0.5 - H/2;
     double vz = Q[2] - W/(2*tan(alpha/2));
@@ -26,8 +34,7 @@ int main() {
     
     // int W = 2560;
     // int H = 1600;
-    //parameters
-    int max_path_length = 7;
+    int max_path_length = 5;
     double alpha = M_PI/3; // pi/4
     double gamma = 2.2;
     Scene scene;
@@ -36,36 +43,33 @@ int main() {
     double n_air = scene.get_refr_index_air();
     int samples = scene.samples;
     //to make the averages
-    double i1,i2,i3;
     std::vector<unsigned char> image(W*H * 3, 0);
+    // #pragma omp parallel for , schedule(dynamic, 1)
+    #pragma omp parallel for
     for (int i = 0; i < H; i++) {
         for (int j = 0; j < W; j++) {
-            int x = j;
-            int y = H - 1 - i;
-            //we compute the coordinates of (x,y)
-            Vector coord = pixel_to_coordinates(Q,W,H,alpha,x,y);
-            // corresponding ray
-            Vector q;
-            q = (coord-Q);
-            q.normalize();
-            Ray r(Q,q);
-            i1 = 0;i2 = 0;i3 = 0;
+            // q = (coord-Q);
+            // q.normalize();
+            Vector color;
+            double x = j; double y = H - 1 - i;
             for (int i = 0;i<samples;i++){
-                Vector color = scene.getColor(r, max_path_length,n_air);
-                // color = pow(color,1./gamma);
-                i1+= color[0];i2+= color[1];i3+= color[2];
+                double x1,y1;
+                boxMuller(1,x1,y1);
+                Vector rand_dir = pixel_to_coordinates(Q,W,H,alpha,x+x1,y+y1);
+                Ray r(Q,rand_dir);
+                color += scene.getColor(r, max_path_length,n_air);
             }
-            i1 /= samples;i2 /= samples;i3 /= samples;
 
-            image[i*W*3+j*3 + 0] = std::min(255,int(pow(i1,1./gamma)));
-            image[i*W*3+j*3 + 1] = std::min(255,int(pow(i2,1./gamma)));
-            image[i*W*3+j*3 + 2] = std::min(255,int(pow(i3,1./gamma)));
+            image[i*W*3+j*3 + 0] = std::min(255,int(pow(color[0]/samples,1./gamma)));
+            image[i*W*3+j*3 + 1] = std::min(255,int(pow(color[1]/samples,1./gamma)));
+            image[i*W*3+j*3 + 2] = std::min(255,int(pow(color[2]/samples,1./gamma)));
         }
     }
     stbi_write_png("image.png", W, H, 3, &image[0], 0); 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     duration<double> time_span = duration_cast<duration<double> >(t2 - t1);
-    std::cout << "It took me " << time_span.count() << " seconds.";
+    double time = time_span.count();
+    std::cout << "It took me " << int(time/60) << " minutes and " << (int(time)%60) << " seconds"; 
     std::cout << std::endl;
     return 0;
 }
