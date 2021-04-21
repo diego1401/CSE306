@@ -7,22 +7,33 @@ class Scene
 {
 public:
     int samples;  
+    bool going_in;
+    double light_source_radius;
+    double last_refractive_index;
+    double camera_distance;
+    double aperture;
     explicit Scene();
     double get_refr_index_air();
-    bool Fresnel(Vector omega, Intersection& inter,double n1,double&n2);
+    bool Fresnel(Vector omega, Intersection& inter,double& n1,double&n2);
     Intersection intersect(Ray r);
-    Ray reflect(Vector omega_i,Intersection inter);
-    Ray refract(Vector omega_i,Intersection& inter,double n1,double n2);
-    Vector Lambertian(Vector rho,Intersection inter); 
+    Ray reflect(Vector omega_i,Intersection& inter);
+    Ray refract(Vector omega_i,Intersection& inter,double n1,double& n2);
+    Vector direct_light(Vector rho,Intersection& inter); 
+    Ray depth_of_field(Vector Q,Vector u,double D,double aperture);
+    // Vector random_point_on_light_sphere();
     Vector get_Q();
     Vector get_S();
-    Vector getColor(const Ray& ray, int ray_depth, double refr_index);
+    Vector getColor(const Ray& ray, int ray_depth, double refr_index,bool last_bounce_diffuse);
 
 private :
     double I;
     double eps;
-    double refractive_index_air;  
-    double last_refr_index;
+    double refractive_index_air; 
+    double refractive_index_ball; 
+    
+    
+    
+    
     
     std::vector<Sphere> s;
     Vector Q;

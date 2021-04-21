@@ -35,29 +35,35 @@ int main() {
     // int W = 2560;
     // int H = 1600;
     int max_path_length = 5;
-    double alpha = M_PI/3; // pi/4
+    double alpha = M_PI/3;
     double gamma = 2.2;
     Scene scene;
     Vector Q = scene.get_Q();
-    Vector S = scene.get_S();
+    double D = scene.camera_distance; //distance of the middle white ball
+    // double f = W/(2* tan(alpha/2));
+    // printf("%f\n",2*sqrt(f));
+    scene.aperture = 2.8;
+    double aperture = scene.aperture;
     double n_air = scene.get_refr_index_air();
     int samples = scene.samples;
-    //to make the averages
     std::vector<unsigned char> image(W*H * 3, 0);
-    // #pragma omp parallel for , schedule(dynamic, 1)
-    #pragma omp parallel for
+    #pragma omp parallel for schedule(dynamic, 1)
     for (int i = 0; i < H; i++) {
         for (int j = 0; j < W; j++) {
-            // q = (coord-Q);
-            // q.normalize();
             Vector color;
             double x = j; double y = H - 1 - i;
             for (int i = 0;i<samples;i++){
                 double x1,y1;
                 boxMuller(1,x1,y1);
+                scene.going_in = true;
                 Vector rand_dir = pixel_to_coordinates(Q,W,H,alpha,x+x1,y+y1);
-                Ray r(Q,rand_dir);
-                color += scene.getColor(r, max_path_length,n_air);
+                Vector q = rand_dir - Q;
+                q.normalize();
+                //Without Dof
+                // Ray r(Q,q);
+                // color += scene.getColor(r, max_path_length,n_air);
+                // Implementation of DoF
+                color += scene.getColor(scene.depth_of_field(Q,q,D,aperture),max_path_length,n_air);
             }
 
             image[i*W*3+j*3 + 0] = std::min(255,int(pow(color[0]/samples,1./gamma)));

@@ -13,7 +13,8 @@ public:
     };
     
     Vector getO(){ return O;}
-    Vector getu(){return u;}
+    Vector getu(){
+        return u;}
 private :
     Vector O;
     Vector u;

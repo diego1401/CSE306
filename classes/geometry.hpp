@@ -1,6 +1,6 @@
 #pragma onces
-#include "ray.cpp"
 #include <vector>
+#include "vector.cpp"
 
 struct Intersection
 {
@@ -13,24 +13,15 @@ struct Intersection
     int sphere_id;
 };
 
-class Sphere
-{
-private:
+class Geometry {
+
+public:
+    virtual Intersection intersect();
+
+private :
     Vector C;
     Vector albedo;
-    double R;
     double refract_ind;
     bool mirror;
     bool light;
-    
-public:
-    int sphere_id;
-    explicit Sphere(Vector c,double r,Vector rho,bool mirror,double n,bool light);
-    bool is_mirror();
-    bool is_light();
-    double get_R();
-    double get_refract();
-    Intersection intersect(Ray r);
-    Vector get_albedo();
 };
-
