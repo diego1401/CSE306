@@ -1,14 +1,14 @@
 #include "sphere.hpp"
 
 
-Sphere::Sphere(Vector c, double r,Vector rho,bool flag=false,double n=-100.,bool flag2=false){ 
+Sphere::Sphere(Vector c, double r,Vector rho,Motion m,bool flag=false,double n=-100.,bool flag2=false){ 
         C = c;
         R = r;
         albedo = rho * (1./255.);
         mirror = flag;
         light = flag2;
-        refract_ind = n; // 0 means no refraction
-
+        refract_ind = n; // -100 means no refraction
+        motion = m;
         };
 
 double Sphere::get_R(){return R;}
@@ -16,12 +16,17 @@ bool Sphere::is_mirror(){return mirror;}
 bool Sphere::is_light(){return light;}
 double Sphere::get_refract(){return refract_ind;}
 Vector Sphere::get_albedo(){return albedo;}
-
 Intersection Sphere::intersect(Ray r){
+        //treat motion
+        Vector moved_C = C+ r.get_time() * motion.speed; //we can do more complex stuff here
+        // if(sphere_id==2) {
+        //     printf("%f\n",r.get_time());
+        // }
+        //to put like before just replace by C
         Vector u = r.getu();
         Vector O = r.getO();
-        double t = dot(u,C-O);
-        double delta = square(t) - ( (O-C).norm_squared() - square(R));
+        double t = dot(u,moved_C-O);
+        double delta = square(t) - ( (O-moved_C).norm_squared() - square(R));
 
         Intersection inter;
         
@@ -51,7 +56,7 @@ Intersection Sphere::intersect(Ray r){
                 }
         }
         inter.intersects = true;
-        inter.N = inter.P - C;
+        inter.N = inter.P - moved_C;
         inter.N.normalize();
         inter.albedo = albedo; // initialize albedo
         inter.sphere_id = sphere_id;

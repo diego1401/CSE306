@@ -16,14 +16,14 @@ public:
     double get_refr_index_air();
     bool Fresnel(Vector omega, Intersection& inter,double& n1,double&n2);
     Intersection intersect(Ray r);
-    Ray reflect(Vector omega_i,Intersection& inter);
-    Ray refract(Vector omega_i,Intersection& inter,double n1,double& n2);
-    Vector direct_light(Vector rho,Intersection& inter); 
-    Ray depth_of_field(Vector Q,Vector u,double D,double aperture);
+    Ray reflect(Vector omega_i,Intersection& inter,double time);
+    Ray refract(Vector omega_i,Intersection& inter,double n1,double& n2,double time);
+    Vector direct_light(Vector rho,Intersection& inter,double time); 
+    Ray depth_of_field(Vector Q,Vector u,double D,double aperture,double time);
     // Vector random_point_on_light_sphere();
     Vector get_Q();
     Vector get_S();
-    Vector getColor(const Ray& ray, int ray_depth, double refr_index,bool last_bounce_diffuse);
+    Vector getColor(const Ray& ray, int ray_depth, double refr_index,double time,bool last_bounce_diffuse);
 
 private :
     double I;

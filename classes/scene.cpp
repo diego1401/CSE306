@@ -44,7 +44,7 @@ Scene::Scene(){
     Q = q;
     S = light_center;
     I = 2*pow(10,10);
-    samples = 32;
+    samples = 2000;
     light_source_radius = 6;
     refractive_index_air = 1.0003;
     refractive_index_ball = 1.5;
@@ -61,65 +61,74 @@ Scene::Scene(){
     Vector green(0,255,0);
     Vector cyan(0,255,255);
     Vector yellow(255,255,0);
+    //motion
+    Motion trivial_motion;
+    trivial_motion.location = Vector(0,0,0);
+    trivial_motion.speed = Vector(0,0,0);
+    trivial_motion.t = 0;
+
+    Vector speed(0,-9.8,0);
+    Motion ball2;
+    ball2.speed = speed;
     //State the center of the walls
     Vector wall_t (0,dist,0); //top wall
-    Sphere top_wall(wall_t,R,red);
+    Sphere top_wall(wall_t,R,red,trivial_motion);
 
     Vector wall_bot (0,-dist,0); //bottom wall
-    Sphere bottom_wall(wall_bot,R+50,blue);
+    Sphere bottom_wall(wall_bot,R+50,blue,trivial_motion);
 
     Vector wall_f (0,0,-dist); //front wall
-    Sphere front_wall(wall_f,R,green);
+    Sphere front_wall(wall_f,R,green,trivial_motion);
 
     Vector wall_b (0,0,dist); //back wall
-    Sphere back_wall(wall_b,R,red);
+    Sphere back_wall(wall_b,R,red,trivial_motion);
 
     Vector wall_l (dist,0,0); //left wall
-    Sphere left_wall(wall_l,R,yellow);
+    Sphere left_wall(wall_l,R,yellow,trivial_motion);
 
     Vector wall_r (-dist,0,0); //right wall
-    Sphere right_wall(wall_r,R,cyan);
+    Sphere right_wall(wall_r,R,cyan,trivial_motion);
     // Creating and pushing the first sphere of our interest
-    double far = 0;
     Vector center (10,0,-20); //ball
-    Sphere center_sphere(center,10,purple,true);
+    Sphere center_sphere(center,10,purple,trivial_motion,true);
 
     //refractive sphere
     Vector center2 (0,0,0); //ball
-    Sphere center_sphere2(center2,10,white);
+    Sphere center_sphere2(center2,10,white,trivial_motion);
 
     // Hollow sphere
-    Vector center3 (-10,0,20); //ball
-    Sphere center_sphere3(center3,10,red,false,refractive_index_ball);
+    Vector center3 (-10,10,20); //ball
+    Sphere center_sphere3(center3,10,red,ball2,false,refractive_index_ball);
     // Sphere center_sphere4(center3,9.5,purple,false,refractive_index_air);
 
     //ligth sphere
-    Sphere light_sphere(light_center,light_source_radius,white,false,-100,true);
+    Sphere light_sphere(light_center,light_source_radius,white,trivial_motion,false,-100,true);
 
 
     
     // We push the walls into our list of spheres
-    left_wall.sphere_id = 0;
+    int counter = 0;
+    left_wall.sphere_id = counter; counter++;
     s.push_back(left_wall);
-    right_wall.sphere_id = 1;
+    right_wall.sphere_id = counter; counter++;
     s.push_back(right_wall);
-    top_wall.sphere_id = 2;
+    top_wall.sphere_id = counter; counter++;
     s.push_back(top_wall);
-    bottom_wall.sphere_id = 3;
+    bottom_wall.sphere_id = counter; counter++;
     s.push_back(bottom_wall);
-    front_wall.sphere_id = 4;
+    front_wall.sphere_id = counter; counter++;
     s.push_back(front_wall);
-    back_wall.sphere_id = 5;
+    back_wall.sphere_id = counter; counter++;
     s.push_back(back_wall);
-    light_sphere.sphere_id = 6;
+    light_sphere.sphere_id = counter; counter++;
     s.push_back(light_sphere);
-    center_sphere.sphere_id = 7;
+    center_sphere.sphere_id = counter; counter++;
     s.push_back(center_sphere);
-    center_sphere2.sphere_id = 8;
+    center_sphere2.sphere_id = counter; counter++;
     s.push_back(center_sphere2);
-    center_sphere3.sphere_id = 9;
+    center_sphere3.sphere_id = counter; counter++;
     s.push_back(center_sphere3);
-    // center_sphere4.sphere_id = 10;
+    // center_sphere4.sphere_id = counter; counter++;
     // s.push_back(center_sphere4);
     
     };
@@ -130,13 +139,13 @@ Vector Scene::get_Q(){return Q;};
 
 Vector Scene::get_S(){return S;};
 
-Vector Scene::direct_light(Vector rho,Intersection& inter){
+Vector Scene::direct_light(Vector rho,Intersection& inter,double time){
         // add direct light
         Vector D = inter.P - get_S(); D.normalize();
         Vector xprime = light_source_radius * random_cos(D) + get_S();
         Vector Nprime = (xprime - get_S()); Nprime.normalize();
         Vector omega_i = (xprime - inter.P); double distance_sq = omega_i.norm_squared(); omega_i.normalize();
-        Ray visible(inter.P + eps*inter.N,omega_i);
+        Ray visible(inter.P + eps*inter.N,omega_i,time);
         Intersection inter_visible = intersect(visible);
         double visibility = s[inter_visible.sphere_id].is_light() or !inter.intersects; //if we touch the light
         double pdf = dot(Nprime,D)/ (M_PI * square(light_source_radius));
@@ -167,13 +176,13 @@ Intersection Scene::intersect(Ray r){
         return inter;
     }
 
-Ray Scene::reflect(Vector omega_i,Intersection& inter){
+Ray Scene::reflect(Vector omega_i,Intersection& inter,double time){
     Vector omega_r = omega_i - 2* dot(omega_i,inter.N)* inter.N;
-    Ray reflected_ray(inter.P + eps*inter.N,omega_r);
+    Ray reflected_ray(inter.P + eps*inter.N,omega_r,time);
     return reflected_ray;
 }
 
-Ray Scene::refract(Vector omega,Intersection& inter,double n1,double& n2){
+Ray Scene::refract(Vector omega,Intersection& inter,double n1,double& n2,double time){
         double ratio = n1/n2;
         double d = dot(omega,inter.N);
         Vector omega_T = ratio * (omega - d*inter.N);
@@ -181,9 +190,8 @@ Ray Scene::refract(Vector omega,Intersection& inter,double n1,double& n2){
         double delta = 1 - square(ratio) * (1-square(d)) ;
         if (delta<0) {
             n2 = n1; // we stay in the same environement
-            return reflect(omega,inter);//total internal reflection
+            return reflect(omega,inter,time);//total internal reflection
         }
-        //FIXXXXX
         last_refractive_index = n1;
         //
         //At this point we are sure we are dealing with a refraction      
@@ -191,7 +199,7 @@ Ray Scene::refract(Vector omega,Intersection& inter,double n1,double& n2){
         //We build omega_t
         Vector omega_t = omega_T + omega_N;
         omega_t.normalize();
-        Ray refracted_ray(inter.P - eps*inter.N,omega_t);
+        Ray refracted_ray(inter.P - eps*inter.N,omega_t,time);
         return refracted_ray;
 }
 
@@ -217,7 +225,7 @@ bool Scene::Fresnel(Vector omega, Intersection& inter,double& n1,double&n2){
     return u<R;
 }
 
-Vector Scene::getColor(const Ray& ray, int ray_depth,double refr_index,bool last_bounce_diffuse=false){
+Vector Scene::getColor(const Ray& ray, int ray_depth,double refr_index,double time,bool last_bounce_diffuse=false){
     if (ray_depth >= 0){
         Intersection inter = intersect(ray);
         if (inter.intersects){ 
@@ -231,20 +239,20 @@ Vector Scene::getColor(const Ray& ray, int ray_depth,double refr_index,bool last
             }
             if (current_sphere.is_mirror()) // we reflect
             {
-                return getColor(reflect(omega,inter),(ray_depth-1),refr_index); 
+                return getColor(reflect(omega,inter,time),(ray_depth-1),refr_index,time); 
             }
             else if (n2>0.) // sphere is refractive
             {   
                 if(Fresnel(omega,inter,refr_index,n2)){
-                    return getColor(reflect(omega,inter),(ray_depth-1),refr_index); //reflection
+                    return getColor(reflect(omega,inter,time),(ray_depth-1),refr_index,time); //reflection
                 }
-                return getColor(refract(omega,inter,refr_index,n2),(ray_depth-1),n2);
+                return getColor(refract(omega,inter,refr_index,n2,time),(ray_depth-1),n2,time);
             }
             else{ //diffusive surfaces
                 //implementation of soft shadows in direct_light
-                Vector Lo = direct_light(inter.albedo,inter);
-                Ray randomRay(inter.P+eps*inter.N,random_cos(inter.N));
-                Lo += element_wise_product(inter.albedo,getColor(randomRay,ray_depth-1,refr_index,true));
+                Vector Lo = direct_light(inter.albedo,inter,time);
+                Ray randomRay(inter.P+eps*inter.N,random_cos(inter.N),time);
+                Lo += element_wise_product(inter.albedo,getColor(randomRay,ray_depth-1,refr_index,time,true));
                 return Lo;
             } 
         }
@@ -252,7 +260,7 @@ Vector Scene::getColor(const Ray& ray, int ray_depth,double refr_index,bool last
     return Vector(0.,0.,0.); // we terminate when ray_depth is less than 0
 };
 
-Ray Scene::depth_of_field(Vector Q, Vector u,double D,double aperture){
+Ray Scene::depth_of_field(Vector Q, Vector u,double D,double aperture,double time){
     // The formulas had to be changed a bit
     Vector P = Q + (D/abs(u[2])) * u;
     double r = uniform (engine)  ; r = sqrt(r)* aperture;
@@ -260,6 +268,6 @@ Ray Scene::depth_of_field(Vector Q, Vector u,double D,double aperture){
     double x = r* cos(theta); double y = r* sin(theta); double z = Q[2];
     Vector Q_prime(x,y,z);
     Vector u_prime = P - Q_prime; u_prime.normalize();
-    return Ray(Q_prime,u_prime);
+    return Ray(Q_prime,u_prime,time);
 }
 

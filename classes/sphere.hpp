@@ -16,16 +16,12 @@ struct Intersection
 class Sphere
 {
 private:
-    Vector C;
-    Vector albedo;
-    double R;
-    double refract_ind;
-    bool mirror;
-    bool light;
+    Vector C; double R;
+    Vector albedo; double refract_ind;  bool mirror;  bool light; Motion motion;
     
 public:
     int sphere_id;
-    explicit Sphere(Vector c,double r,Vector rho,bool mirror,double n,bool light);
+    explicit Sphere(Vector c,double r,Vector rho,Motion m,bool mirror,double n,bool light);
     bool is_mirror();
     bool is_light();
     double get_R();

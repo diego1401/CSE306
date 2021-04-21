@@ -57,13 +57,15 @@ int main() {
                 boxMuller(1,x1,y1);
                 scene.going_in = true;
                 Vector rand_dir = pixel_to_coordinates(Q,W,H,alpha,x+x1,y+y1);
+                double t = uniform(engine);
+                // printf("%f\n",t);
                 Vector q = rand_dir - Q;
                 q.normalize();
                 //Without Dof
                 // Ray r(Q,q);
                 // color += scene.getColor(r, max_path_length,n_air);
                 // Implementation of DoF
-                color += scene.getColor(scene.depth_of_field(Q,q,D,aperture),max_path_length,n_air);
+                color += scene.getColor(scene.depth_of_field(Q,q,D,aperture,t),max_path_length,n_air,t);
             }
 
             image[i*W*3+j*3 + 0] = std::min(255,int(pow(color[0]/samples,1./gamma)));

@@ -103,3 +103,8 @@ Vector cross(const Vector& a, const Vector& b) {
                   a[0] * b[1] - a[1] * b[0]);
     }
 
+struct Motion{
+    double t;
+    Vector location;
+    Vector speed;
+};
