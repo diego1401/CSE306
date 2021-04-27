@@ -1,27 +1,22 @@
-#include "sphere.hpp"
+#pragma once
+#include "geometry.hpp"
 
-
-Sphere::Sphere(Vector c, double r,Vector rho,Motion m,bool flag=false,double n=-100.,bool flag2=false){ 
-        C = c;
-        R = r;
-        albedo = rho * (1./255.);
-        mirror = flag;
-        light = flag2;
-        refract_ind = n; // -100 means no refraction
-        motion = m;
+class Sphere: public Geometry {
+public:
+    double R;
+    Sphere(){};
+    Sphere(Vector c, double r,Vector rho,Motion m,bool _mirror=false,double n=-100.,bool _light=false){ 
+        this->C = c;
+        this->albedo = rho * (1./255.);
+        this->refract_ind = n; // -100 means no refraction
+        this->mirror = _mirror;
+        this->light = _light;
+        this->motion = m;
+        this->R = r;
         };
-
-double Sphere::get_R(){return R;}
-bool Sphere::is_mirror(){return mirror;}
-bool Sphere::is_light(){return light;}
-double Sphere::get_refract(){return refract_ind;}
-Vector Sphere::get_albedo(){return albedo;}
-Intersection Sphere::intersect(Ray r){
+    Intersection intersect(Ray r){
         //treat motion
         Vector moved_C = C+ r.get_time() * motion.speed; //we can do more complex stuff here
-        // if(sphere_id==2) {
-        //     printf("%f\n",r.get_time());
-        // }
         //to put like before just replace by C
         Vector u = r.getu();
         Vector O = r.getO();
@@ -59,7 +54,8 @@ Intersection Sphere::intersect(Ray r){
         inter.N = inter.P - moved_C;
         inter.N.normalize();
         inter.albedo = albedo; // initialize albedo
-        inter.sphere_id = sphere_id;
+        inter.id = id;
         inter.incoming_direction = u;
         return inter;
     };
+};

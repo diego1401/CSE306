@@ -3,6 +3,11 @@
 #include <iostream>
 #include <math.h>       /* pow */
 #include <stdlib.h>     /* srand, rand */
+#include <vector>
+#include <random>
+
+static std :: default_random_engine engine(10) ; // random seed = 10 
+static std::uniform_real_distribution<double> uniform(0, 1);
 
 //functions to simplify computations
 double square(double x){return x*x;}
@@ -103,8 +108,46 @@ Vector cross(const Vector& a, const Vector& b) {
                   a[0] * b[1] - a[1] * b[0]);
     }
 
+Vector random_cos(const Vector& N){
+    
+    Vector T1(N[0],N[1],N[2]);
+    double min = INFINITY;double argmin = -1;
+    for (int i=0;i<3;i++){
+        if(abs(T1[i])<min){
+            min = T1[i];
+            argmin = i;
+        }
+    }
+    if(argmin==0) T1 = Vector(0,N[2],-N[1]);
+    else if(argmin==1) T1 = Vector(-N[2],0,N[0]);
+    else if(argmin==2) T1 = Vector(-N[1],N[0],0);
+    T1.normalize();
+
+    //Use Box-Muller formula
+    double r1 = uniform (engine) ;
+    double r2 = uniform (engine) ;
+
+    double x = cos(2*M_PI*r1) * sqrt(1-r2);
+    double y = sin(2*M_PI*r1) * sqrt(1-r2);
+    double z = sqrt(r2);
+
+    Vector T2 = cross(T1,N);
+    return x * T1 + y * T2 + z *N;
+}
+
 struct Motion{
     double t;
     Vector location;
     Vector speed;
+};
+
+struct Intersection
+{
+    bool intersects;
+    Vector incoming_direction;
+    Vector P;
+    Vector N;
+    Vector albedo; // color of the sphere it intersects with
+    double length;
+    int id;
 };

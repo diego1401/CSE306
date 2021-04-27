@@ -38,13 +38,11 @@ int main() {
     double alpha = M_PI/3;
     double gamma = 2.2;
     Scene scene;
-    Vector Q = scene.get_Q();
+    Vector Q = scene.Camera;
     double D = scene.camera_distance; //distance of the middle white ball
-    // double f = W/(2* tan(alpha/2));
-    // printf("%f\n",2*sqrt(f));
     scene.aperture = 2.8;
     double aperture = scene.aperture;
-    double n_air = scene.get_refr_index_air();
+    double n_air = scene.refractive_index_air;
     int samples = scene.samples;
     std::vector<unsigned char> image(W*H * 3, 0);
     #pragma omp parallel for schedule(dynamic, 1)
@@ -53,17 +51,13 @@ int main() {
             Vector color;
             double x = j; double y = H - 1 - i;
             for (int i = 0;i<samples;i++){
-                double x1,y1;
+                double x1,y1; double t = uniform(engine);
                 boxMuller(1,x1,y1);
-                scene.going_in = true;
                 Vector rand_dir = pixel_to_coordinates(Q,W,H,alpha,x+x1,y+y1);
-                double t = uniform(engine);
-                // printf("%f\n",t);
                 Vector q = rand_dir - Q;
                 q.normalize();
                 //Without Dof
-                // Ray r(Q,q);
-                // color += scene.getColor(r, max_path_length,n_air);
+                // Ray r(Q,q); color += scene.getColor(r, max_path_length,n_air);
                 // Implementation of DoF
                 color += scene.getColor(scene.depth_of_field(Q,q,D,aperture,t),max_path_length,n_air,t);
             }
