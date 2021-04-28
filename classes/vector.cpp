@@ -5,7 +5,13 @@
 #include <stdlib.h>     /* srand, rand */
 #include <vector>
 #include <random>
-
+#include <string>
+#include <list>
+// #include <iostream>
+// #include <stdio.h>
+#include <string.h>
+#include <algorithm>
+// #include <vector>
 static std :: default_random_engine engine(10) ; // random seed = 10 
 static std::uniform_real_distribution<double> uniform(0, 1);
 
@@ -24,6 +30,14 @@ public :
     //useful functions
     void print_vector(){
         printf("(%f,%f,%f)\n",coords[0],coords[1],coords[2]);
+    }
+    int argmax(){
+        double max = std::max({coords[0],coords[1],coords[2]});
+        for(int i=0;i<3;i++){
+            if(coords[i]==max) return i;
+        }
+        printf("BRUHHHHHH\n");
+        return -1;
     }
     // Vector operations
     Vector& operator+=(const Vector& b) {

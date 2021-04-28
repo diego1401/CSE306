@@ -1,9 +1,3 @@
-#include <string>
-#include <iostream>
-#include <stdio.h>
-#include <string.h>
-#include <algorithm>
-#include <vector>
 #include "geometry.hpp"
 
 class TriangleIndices {
@@ -16,8 +10,7 @@ public:
 	int group;       // face group
 };
 
-
-class TriangleMesh: public Geometry {
+class TriangleMesh {
 public:
   ~TriangleMesh() {}
 	TriangleMesh() {};
@@ -26,6 +19,17 @@ public:
 	std::vector<Vector> normals;
 	std::vector<Vector> uvs;
 	std::vector<Vector> vertexcolors;
+	
+	Vector compute_barycenter(int index){
+		TriangleIndices triangle = indices[index];
+		Vector A = vertices[triangle.vtxi]; 
+		// A.print_vector();
+		Vector B = vertices[triangle.vtxj]; 
+		// B.print_vector();
+		Vector C = vertices[triangle.vtxk]; 
+		// C.print_vector();
+		return (A+B+C)*(0.3333);
+	}
 
 	void readOBJ(const char* obj) {
 
@@ -203,17 +207,141 @@ public:
 
 	}
 
+	// Intersection intersect(Ray r){
+    //     Intersection inter;
+    //     inter.intersects = false;
+    //     double d = INFINITY;
+	// 	Vector O = r.getO(); Vector u = r.getu();
+	// 	for(int i = 0;i<indices.size();i++){
+	// 		TriangleIndices triangle = indices[i];
+	// 		Vector A = vertices[triangle.vtxi]; Vector B = vertices[triangle.vtxj]; Vector C = vertices[triangle.vtxk];
+	// 		Vector e1 = B-A; Vector e2 = C-A; Vector N = cross(e1,e2);
+
+	// 		double denominator = dot(N,u);
+	// 		double Beta = dot(e2,cross(A-O,u))/denominator;
+	// 		double gamma = -dot(e1,cross(A-O,u))/denominator;
+	// 		double alpha = 1 - Beta - gamma;
+	// 		double t = dot(A-O,N)/denominator;
+
+	// 		bool in_triangle = ((0<=alpha) && (alpha<=1)) && 
+	// 						   ((0<=Beta)  && (Beta<=1))  &&
+	// 						   ((0<=gamma) && (gamma<=1));
+
+	// 		if(t<d && t>=0 && in_triangle){
+	// 			d = t;
+	// 			inter.length = t;
+	// 			inter.intersects = true;
+	// 			inter.P = O + t*u;
+	// 			inter.albedo = Vector(1.,1.,1.);
+	// 			inter.id = id;
+	// 			inter.N = N ; inter.N.normalize();
+	// 			inter.incoming_direction = u;
+	// 		}
+
+    //     }
+    //     return inter;
+	// }
+	
+};
+
+class BoundingBox: public Geometry{
+    public:
+    Vector Bmin,Bmax,C;
+	// TriangleMesh* Mesh;
+	int id;
+	BoundingBox(){};
+	
+	BoundingBox(TriangleMesh* Mesh,int start,int end){
+		// Mesh = _Mesh;
+		// int id;
+		compute_Bounding_Box(Mesh,start,end);
+	}
+
+	void compute_Bounding_Box(TriangleMesh* Mesh,int start,int end){
+		//First we get the biggest and smallest values of x,y,z
+		double max_x = 0,max_y = 0,max_z = 0;
+		double min_x = INFINITY,min_y = INFINITY,min_z = INFINITY;
+		
+		for(int i = start;i<end;i++){
+			TriangleIndices triangle = Mesh->indices[i];
+			Vector A = Mesh->vertices[triangle.vtxi]; 
+			Vector B = Mesh->vertices[triangle.vtxj]; 
+			Vector C = Mesh->vertices[triangle.vtxk];
+			max_x = std::max({max_x,A[0],B[0],C[0]});
+			max_y = std::max({max_y,A[1],B[1],C[1]});
+			max_z = std::max({max_z,A[2],B[2],C[2]});
+
+			min_x = std::min({min_x,A[0],B[0],C[0]});
+			min_y = std::min({min_y,A[1],B[1],C[1]});
+			min_z = std::min({min_z,A[2],B[2],C[2]});
+			
+		}
+
+		Bmax = Vector(max_x,max_y,max_z); 
+		Bmin = Vector(min_x,min_y,min_z); 
+	}	
+
+	Vector compute_diag(){
+		return Bmax-Bmin;
+	}
+
 	Intersection intersect(Ray r){
-        Intersection inter;
+		Vector O = r.getO(); Vector u = r.getu();
+		//compute tmax
+		double tmax_x = u[0]!=0? (Bmax[0]-O[0])/u[0]:INFINITY;
+		double tmax_y = u[1]!=0? (Bmax[1]-O[1])/u[1]:INFINITY;
+		double tmax_z = u[2]!=0? (Bmax[2]-O[2])/u[2]:INFINITY;
+		//compute tmin
+		double tmin_x = u[0]!=0? (Bmin[0]-O[0])/u[0]:0;
+		double tmin_y = u[1]!=0? (Bmin[1]-O[1])/u[1]:0;
+		double tmin_z = u[2]!=0? (Bmin[2]-O[2])/u[2]:0;
+		//compute t0 and t1
+		double t0_x = std::min(tmin_x,tmax_x); double t1_x = std::max(tmin_x,tmax_x);
+		double t0_y = std::min(tmin_y,tmax_y); double t1_y = std::max(tmin_y,tmax_y);
+		double t0_z = std::min(tmin_z,tmax_z); double t1_z = std::max(tmin_z,tmax_z);
+
+		Intersection inter;
+		inter.intersects = false;
+		//if it intersects with the bounding box we check
+		if (std::min({t1_x,t1_y,t1_z})>std::max({t0_x,t0_y,t0_z})){
+			// inter = Mesh->intersect(r);
+			inter.intersects = true;
+			inter.length = std::max({t0_x,t0_y,t0_z});
+		}
+		return inter;
+	}
+};
+
+class BVH: public Geometry{
+	public:
+	TriangleMesh* Mesh;
+	BoundingBox* value;
+	BVH* lchild; BVH* rchild;
+	int start,end,id;
+
+	BVH(){};
+
+	BVH(TriangleMesh* _Mesh,int _start,int _end){
+		// printf("creating BVH\n");
+		this->lchild = NULL; this->rchild = NULL;
+		this->Mesh = _Mesh; this->start = _start; this->end = _end;
+		this->value = new BoundingBox(this->Mesh,this->start,this->end);
+		compute_BVH();
+	}
+	Intersection intersect_with_mesh(Ray r,int start,int end){
+		Intersection inter;
         inter.intersects = false;
         double d = INFINITY;
 		Vector O = r.getO(); Vector u = r.getu();
-		for(int i = 0;i<indices.size();i++){
-			TriangleIndices triangle = indices[i];
-			Vector A = vertices[triangle.vtxi]; Vector B = vertices[triangle.vtxj]; Vector C = vertices[triangle.vtxk];
+		for(int i = start;i<end;i++){
+			TriangleIndices triangle = Mesh->indices[i];
+			Vector A = Mesh->vertices[triangle.vtxi]; 
+			Vector B = Mesh->vertices[triangle.vtxj]; 
+			Vector C = Mesh->vertices[triangle.vtxk];
 			Vector e1 = B-A; Vector e2 = C-A; Vector N = cross(e1,e2);
 
 			double denominator = dot(N,u);
+			if(denominator){
 			double Beta = dot(e2,cross(A-O,u))/denominator;
 			double gamma = -dot(e1,cross(A-O,u))/denominator;
 			double alpha = 1 - Beta - gamma;
@@ -233,71 +361,63 @@ public:
 				inter.N = N ; inter.N.normalize();
 				inter.incoming_direction = u;
 			}
+			}
 
         }
         return inter;
 	}
-	
-};
-
-class BoundingBox: public Geometry{
-    public:
-    Vector Bmin,Bmax,C;
-	TriangleMesh Mesh;
-	int id;
-	BoundingBox(){};
-	
-	BoundingBox(TriangleMesh _Mesh){
-		Mesh = _Mesh;
-		int id;
-		compute_Bounding_Box();
-	}
-
-	void compute_Bounding_Box(){
-		//First we get the biggest and smallest values of x,y,z
-		double max_x = 0,max_y = 0,max_z = 0;
-		double min_x = INFINITY,min_y = INFINITY,min_z = INFINITY;
-		
-		for(int i = 0;i<Mesh.indices.size();i++){
-			TriangleIndices triangle = Mesh.indices[i];
-			Vector A = Mesh.vertices[triangle.vtxi]; 
-			Vector B = Mesh.vertices[triangle.vtxj]; 
-			Vector C = Mesh.vertices[triangle.vtxk];
-			max_x = std::max({max_x,A[0],B[0],C[0]});
-			max_y = std::max({max_y,A[1],B[1],C[1]});
-			max_z = std::max({max_z,A[2],B[2],C[2]});
-
-			min_x = std::min({min_x,A[0],B[0],C[0]});
-			min_y = std::min({min_y,A[1],B[1],C[1]});
-			min_z = std::min({min_z,A[2],B[2],C[2]});
-			
-		}
-
-		Bmax = Vector(max_x,max_y,max_z); 
-		Bmin = Vector(min_x,min_y,min_z); 
-	}	
 
 	Intersection intersect(Ray r){
-		Vector O = r.getO(); Vector u = r.getu();
-		//compute tmax
-		double tmax_x = (Bmax[0]-O[0])/u[0];
-		double tmax_y = (Bmax[1]-O[1])/u[1];
-		double tmax_z = (Bmax[2]-O[2])/u[2];
-		//compute tmin
-		double tmin_x = (Bmin[0]-O[0])/u[0];
-		double tmin_y = (Bmin[1]-O[1])/u[1];
-		double tmin_z = (Bmin[2]-O[2])/u[2];
-		//compute t0 and t1
-		double t0_x = std::min(tmin_x,tmax_x); double t1_x = std::max(tmin_x,tmax_x);
-		double t0_y = std::min(tmin_y,tmax_y); double t1_y = std::max(tmin_y,tmax_y);
-		double t0_z = std::min(tmin_z,tmax_z); double t1_z = std::max(tmin_z,tmax_z);
-
 		Intersection inter;
 		inter.intersects = false;
-		//if it intersects with the bounding box we check
-		if (std::min({t1_x,t1_y,t1_z})>std::max({t0_x,t0_y,t0_z})){
-			inter = Mesh.intersect(r);
+		if(!this->value->intersect(r).intersects) return inter;
+		std::list<BVH*> nodes_to_visit; nodes_to_visit.push_front(this);
+		double best_distance = INFINITY;
+		while(!nodes_to_visit.empty()){
+			BVH* curr_node = nodes_to_visit.back();
+			nodes_to_visit.pop_back();
+			if(curr_node->lchild){ //if there is a left child we are not in a leaf
+			// not this is a full binary tree
+				Intersection inter_lchild = curr_node->lchild->value->intersect(r);
+				Intersection inter_rchild = curr_node->rchild->value->intersect(r);
+				if(inter_lchild.intersects){
+					if(inter_lchild.length<best_distance){
+						nodes_to_visit.push_back(curr_node->lchild);
+					}
+				}
+				if(inter_rchild.intersects){
+					if(inter_rchild.length<best_distance){
+						nodes_to_visit.push_back(curr_node->rchild);
+					} 
+				}
+			}
+			else{//we are in a leaf
+				Intersection inter_with_mesh;
+				inter_with_mesh = curr_node->intersect_with_mesh(r,curr_node->start,curr_node->end);
+				if(inter_with_mesh.intersects and inter_with_mesh.length < best_distance){
+					best_distance = inter_with_mesh.length;
+					inter = inter_with_mesh;
+					}
+			}
 		}
 		return inter;
+	}
+
+	void compute_BVH(){
+		Vector diag = this->value->compute_diag();
+		Vector mid_diag = this->value->Bmin + 0.5 * diag;
+		int longest_axis = diag.argmax();
+		int pivot_index = this->start;
+		for(int i=this->start;i<this->end;i++){
+			Vector barycenter = Mesh->compute_barycenter(i);
+			if(barycenter[longest_axis]< mid_diag[longest_axis]){
+				std::swap(this->Mesh->indices[i],this->Mesh->indices[pivot_index]);
+				pivot_index ++;
+			}
+		}
+		if(pivot_index<=this->start || pivot_index>=this->end-1 || (this->end)- (this->start)<5) return;
+
+		this->lchild = new BVH(this->Mesh,this->start,pivot_index);
+		this->rchild = new BVH(this->Mesh,pivot_index,this->end);
 	}
 };

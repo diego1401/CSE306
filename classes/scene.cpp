@@ -8,7 +8,7 @@ Scene::Scene(){
     eps = pow(10,-7);
     Camera = q; light = light_center; I = 2*pow(10,10);light_source_radius = 6;
     refractive_index_air = 1.0003; refractive_index_ball = 1.5;
-    samples = 5;
+    samples = 32;
     
     //All the walls have the same radius
     double R = 940.;
@@ -89,18 +89,17 @@ Scene::Scene(){
     TriangleMesh* cat;
     cat = new TriangleMesh;
     const char* file_name = "/Users/Diego/Documents/SEM6/CSE306/classes/cat/cat.obj"; 
-    cat->motion = trivial_motion;
+    // cat->motion = trivial_motion;
     cat->readOBJ(file_name); 
     for (int i = 0; i < int(cat->vertices.size()); i++) {
         cat->vertices[i] = 0.6 * cat->vertices[i] + Vector(0, -10, 0);
     }
     //his cage
-    BoundingBox* box;
-    box = new BoundingBox(*cat);
-    box->id = counter; counter++;
-    box->motion = trivial_motion;
-    objects.push_back(box);
-
+    BVH* tree;
+    tree = new BVH(cat,0,cat->indices.size());
+    tree->id = counter; counter++;
+    tree->motion = trivial_motion;
+    objects.push_back(tree);
 
     // //draw extremums of the bounding box
     // Geometry* test_sphere2; test_sphere2= new Sphere(box->Bmin,1,red,trivial_motion,false,-100.,false);

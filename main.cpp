@@ -27,6 +27,7 @@ Vector pixel_to_coordinates(Vector Q, int W, int H,double alpha, double x,double
 }
 
 int main() {
+    printf("Drawing...\n");
     using namespace std::chrono;
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
     int W = 512;
@@ -47,6 +48,7 @@ int main() {
     std::vector<unsigned char> image(W*H * 3, 0);
     #pragma omp parallel for schedule(dynamic, 1)
     for (int i = 0; i < H; i++) {
+        // printf("%d\n",i);
         for (int j = 0; j < W; j++) {
             Vector color;
             double x = j; double y = H - 1 - i;
@@ -73,5 +75,6 @@ int main() {
     double time = time_span.count();
     std::cout << "It took me " << int(time/60) << " minutes and " << (int(time)%60) << " seconds"; 
     std::cout << std::endl;
+    printf("finished\n");
     return 0;
 }
