@@ -8,7 +8,7 @@ Scene::Scene(){
     eps = pow(10,-7);
     Camera = q; light = light_center; I = 2*pow(10,10);light_source_radius = 6;
     refractive_index_air = 1.0003; refractive_index_ball = 1.5;
-    samples = 32;
+    samples = 1;
     
     //All the walls have the same radius
     double R = 940.;
@@ -96,8 +96,7 @@ Scene::Scene(){
     }
     //his cage
     BVH* tree;
-    tree = new BVH(cat,0,cat->indices.size());
-    tree->id = counter; counter++;
+    tree = new BVH(cat,0,cat->indices.size(),counter);counter++;
     tree->motion = trivial_motion;
     objects.push_back(tree);
 
@@ -118,7 +117,7 @@ Vector Scene::direct_light(Vector rho,Intersection& inter,double time){
         Vector omega_i = (xprime - inter.P); double distance_sq = omega_i.norm_squared(); omega_i.normalize();
         Ray visible(inter.P + eps*inter.N,omega_i,time);
         Intersection inter_visible = intersect(visible);
-        double visibility = objects[inter_visible.id]->light or !inter.intersects; //if we touch the light
+        double visibility = !inter_visible.intersects or objects[inter_visible.id]->light; //if we touch the light
         double pdf = dot(Nprime,D)/ (M_PI * square(light_source_radius));
         Vector L;
         L = rho *(1/M_PI) * visibility  * (I / (4* square(M_PI*light_source_radius)))
@@ -130,7 +129,6 @@ Vector Scene::direct_light(Vector rho,Intersection& inter,double time){
     }
 
 Intersection Scene::intersect(Ray r){
-        double tmp = 0;
         Intersection inter;
         inter.intersects = false;
         double d = INFINITY;
@@ -196,6 +194,9 @@ Vector Scene::getColor(const Ray& ray, int ray_depth,double refr_index,double ti
         Intersection inter = intersect(ray);
         if (inter.intersects){ 
             Vector omega = inter.incoming_direction;
+            if(inter.id == 11){
+                printf("whattt\n");
+            }
             double n2 = objects[inter.id]->refract_ind;
 
             if(objects[inter.id]->light){ //hit a light source
