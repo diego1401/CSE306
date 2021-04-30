@@ -7,5 +7,5 @@ public:
     bool mirror = false;
     bool light = false; 
     Motion motion;
-    virtual Intersection intersect(Ray r) = 0;
+    virtual Intersection intersect(const Ray& r) = 0;
 };

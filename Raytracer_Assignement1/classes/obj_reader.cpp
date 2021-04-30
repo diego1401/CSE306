@@ -23,12 +23,9 @@ public:
 	Vector compute_barycenter(int index){
 		TriangleIndices triangle = indices[index];
 		Vector A = vertices[triangle.vtxi]; 
-		// A.print_vector();
 		Vector B = vertices[triangle.vtxj]; 
-		// B.print_vector();
 		Vector C = vertices[triangle.vtxk]; 
-		// C.print_vector();
-		return (A+B+C)*(0.3333);
+		return (A+B+C)*(0.3333333);
 	}
 
 	void readOBJ(const char* obj) {
@@ -206,41 +203,6 @@ public:
 		fclose(f);
 
 	}
-
-	// Intersection intersect(Ray r){
-    //     Intersection inter;
-    //     inter.intersects = false;
-    //     double d = INFINITY;
-	// 	Vector O = r.getO(); Vector u = r.getu();
-	// 	for(int i = 0;i<indices.size();i++){
-	// 		TriangleIndices triangle = indices[i];
-	// 		Vector A = vertices[triangle.vtxi]; Vector B = vertices[triangle.vtxj]; Vector C = vertices[triangle.vtxk];
-	// 		Vector e1 = B-A; Vector e2 = C-A; Vector N = cross(e1,e2);
-
-	// 		double denominator = dot(N,u);
-	// 		double Beta = dot(e2,cross(A-O,u))/denominator;
-	// 		double gamma = -dot(e1,cross(A-O,u))/denominator;
-	// 		double alpha = 1 - Beta - gamma;
-	// 		double t = dot(A-O,N)/denominator;
-
-	// 		bool in_triangle = ((0<=alpha) && (alpha<=1)) && 
-	// 						   ((0<=Beta)  && (Beta<=1))  &&
-	// 						   ((0<=gamma) && (gamma<=1));
-
-	// 		if(t<d && t>=0 && in_triangle){
-	// 			d = t;
-	// 			inter.length = t;
-	// 			inter.intersects = true;
-	// 			inter.P = O + t*u;
-	// 			inter.albedo = Vector(1.,1.,1.);
-	// 			inter.id = id;
-	// 			inter.N = N ; inter.N.normalize();
-	// 			inter.incoming_direction = u;
-	// 		}
-
-    //     }
-    //     return inter;
-	// }
 	
 };
 
@@ -283,28 +245,34 @@ class BoundingBox: public Geometry{
 		return this->Bmax - this->Bmin;
 	}
 
-	Intersection intersect(Ray r){
-		Vector O = r.getO(); Vector u = r.getu();
+	Intersection intersect(const Ray& r){
+		Vector O = r.O; Vector u = r.u;
 		//compute tmax
-		double tmax_x = u[0]!=0? (Bmax[0]-O[0])/u[0]:INFINITY;
-		double tmax_y = u[1]!=0? (Bmax[1]-O[1])/u[1]:INFINITY;
-		double tmax_z = u[2]!=0? (Bmax[2]-O[2])/u[2]:INFINITY;
+		double tmax_x = (Bmax[0]-O[0])/u[0];
+		double tmax_y = (Bmax[1]-O[1])/u[1];
+		double tmax_z = (Bmax[2]-O[2])/u[2];
 		//compute tmin
-		double tmin_x = u[0]!=0? (Bmin[0]-O[0])/u[0]:0;
-		double tmin_y = u[1]!=0? (Bmin[1]-O[1])/u[1]:0;
-		double tmin_z = u[2]!=0? (Bmin[2]-O[2])/u[2]:0;
-		//compute t0 and t1
-		double t0_x = std::min(tmin_x,tmax_x); double t1_x = std::max(tmin_x,tmax_x);
-		double t0_y = std::min(tmin_y,tmax_y); double t1_y = std::max(tmin_y,tmax_y);
-		double t0_z = std::min(tmin_z,tmax_z); double t1_z = std::max(tmin_z,tmax_z);
+		double tmin_x = (Bmin[0]-O[0])/u[0];
+		double tmin_y = (Bmin[1]-O[1])/u[1];
+		double tmin_z = (Bmin[2]-O[2])/u[2];
+
+		// compute t0 and t1
+		// double t0_x = std::min(tmin_x,tmax_x); double t1_x = std::max(tmin_x,tmax_x);
+		// double t0_y = std::min(tmin_y,tmax_y); double t1_y = std::max(tmin_y,tmax_y);
+		// double t0_z = std::min(tmin_z,tmax_z); double t1_z = std::max(tmin_z,tmax_z);
+
+		double t0_x,t0_y,t0_z,t1_x,t1_y,t1_z;
+		if(tmin_x<tmax_x) {t0_x = tmin_x;t1_x=tmax_x;} else{t0_x = tmax_x;t1_x=tmin_x;}
+		if(tmin_y<tmax_y) {t0_y = tmin_y;t1_y=tmax_y;} else{t0_y = tmax_y;t1_y=tmin_y;}
+		if(tmin_z<tmax_z) {t0_z = tmin_z;t1_z=tmax_z;} else{t0_z= tmax_z;t1_z=tmin_z;}
 
 		Intersection inter;
 		inter.intersects = false;
 		//if it intersects with the bounding box we check
-		if (std::min({t1_x,t1_y,t1_z})>std::max({t0_x,t0_y,t0_z})){
-			// inter = Mesh->intersect(r);
+		double l = std::max({t0_x,t0_y,t0_z});
+		if (std::min({t1_x,t1_y,t1_z})>l){
 			inter.intersects = true;
-			inter.length = std::max({t0_x,t0_y,t0_z});
+			inter.length = l;
             inter.id = this->id;
 		}
 		return inter;
@@ -328,46 +296,53 @@ class BVH: public Geometry{
 		this->value = new BoundingBox(this->Mesh,this->start,this->end);
 		compute_BVH();
 	}
-	Intersection intersect_with_mesh(Ray r,int start,int end){
+	Intersection intersect_with_mesh(const Ray& r,int start,int end){
 		Intersection inter;
         inter.intersects = false;
         double d = INFINITY;
-		Vector O = r.getO(); Vector u = r.getu();
+		Vector O = r.O; Vector u = r.u;
+		bool in_triangle;
+		Vector A,B,C,e1,e2,N,cros;
+		double denominator,denominator_inv,Beta,gamma,alpha,t;
+
 		for(int i = start;i<end;i++){
 			TriangleIndices triangle = Mesh->indices[i];
-			Vector A = Mesh->vertices[triangle.vtxi]; 
-			Vector B = Mesh->vertices[triangle.vtxj]; 
-			Vector C = Mesh->vertices[triangle.vtxk];
-			Vector e1 = B-A; Vector e2 = C-A; Vector N = cross(e1,e2);
+			A = Mesh->vertices[triangle.vtxi]; 
+			B = Mesh->vertices[triangle.vtxj]; 
+			C = Mesh->vertices[triangle.vtxk];
+			e1 = B-A; e2 = C-A; N = cross(e1,e2);
 
-			double denominator = dot(N,u);
+			denominator = dot(N,u);
 			if(denominator){
-			double Beta = dot(e2,cross(A-O,u))/denominator;
-			double gamma = -dot(e1,cross(A-O,u))/denominator;
-			double alpha = 1 - Beta - gamma;
-			double t = dot(A-O,N)/denominator;
-
-			bool in_triangle = ((0<=alpha) && (alpha<=1)) && 
-							   ((0<=Beta)  && (Beta<=1))  &&
-							   ((0<=gamma) && (gamma<=1));
-
-			if(t<d && t>=0 && in_triangle){
-				d = t;
-				inter.length = t;
-				inter.intersects = true;
-				inter.P = O + t*u;
-				inter.albedo = Vector(1.,1.,1.);
-				inter.id = this->id;
-				inter.N = N ; inter.N.normalize();
-				inter.incoming_direction = u;
-			}
+				cros = cross(A-O,u);
+                denominator_inv = 1/denominator;
+                Beta = dot(e2,cros)*denominator_inv;
+                gamma = -dot(e1,cros)*denominator_inv;
+                alpha = 1 - Beta - gamma;
+                t = dot(A-O,N)*denominator_inv;
+                if(t<d && t>=0){
+					in_triangle = ((0<=alpha) && (alpha<=1)) &&
+									   ((0<=Beta)  && (Beta<=1))  &&
+									   ((0<=gamma) && (gamma<=1));
+					if(in_triangle){
+						d = t;
+						inter.length = t;
+						inter.intersects = true;
+						inter.P = O + t*u;
+						inter.albedo = Vector(1.,1.,1.);
+						inter.id = this->id;
+						inter.N = N ;
+						inter.incoming_direction = u;
+					}
+                }
 			}
 
         }
+        if(inter.intersects) inter.N.normalize();
         return inter;
 	}
 
-	Intersection intersect(Ray r){
+	Intersection intersect(const Ray& r){
 		Intersection inter;
 		inter.intersects = false;
 		if(!this->value->intersect(r).intersects) return inter;

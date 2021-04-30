@@ -123,26 +123,29 @@ Vector cross(const Vector& a, const Vector& b) {
     }
 
 Vector random_cos(const Vector& N){
-    
-    Vector T1(N[0],N[1],N[2]);
-    double min = INFINITY;double argmin = -1;
-    for (int i=0;i<3;i++){
-        if(abs(T1[i])<min){
-            min = T1[i];
+    double min = N[0];double argmin = 0;
+    for (int i=1;i<3;i++){
+        if(abs(N[i])<min){
+            min = N[i];
             argmin = i;
         }
     }
+    Vector T1;
     if(argmin==0) T1 = Vector(0,N[2],-N[1]);
     else if(argmin==1) T1 = Vector(-N[2],0,N[0]);
     else if(argmin==2) T1 = Vector(-N[1],N[0],0);
+
+    //Makes it a bit faster to comment it but colors change a little bit
     T1.normalize();
 
     //Use Box-Muller formula
     double r1 = uniform (engine) ;
     double r2 = uniform (engine) ;
 
-    double x = cos(2*M_PI*r1) * sqrt(1-r2);
-    double y = sin(2*M_PI*r1) * sqrt(1-r2);
+    double c = sqrt(1-r2);
+    double c2 = 2*M_PI*r1;
+    double x = cos(c2) * c;
+    double y = sin(c2) * c;
     double z = sqrt(r2);
 
     Vector T2 = cross(T1,N);

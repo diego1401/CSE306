@@ -88,7 +88,7 @@ Scene::Scene(){
     //Mr. Cat
     TriangleMesh* cat;
     cat = new TriangleMesh;
-    const char* file_name = "/Users/Diego/Documents/SEM6/CSE306/classes/cat/cat.obj"; 
+    const char* file_name = "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/classes/cat/cat.obj"; 
     // cat->motion = trivial_motion;
     cat->readOBJ(file_name); 
     for (int i = 0; i < int(cat->vertices.size()); i++) {
