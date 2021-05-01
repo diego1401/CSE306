@@ -10,7 +10,7 @@ public:
 	int group;       // face group
 };
 
-class TriangleMesh {
+class TriangleMesh: public Geometry {
 public:
   ~TriangleMesh() {}
 	TriangleMesh() {};
@@ -204,29 +204,81 @@ public:
 
 	}
 	
+	Intersection intersect(const Ray& r){
+		Intersection inter;
+        inter.intersects = false;
+        double d = INFINITY;
+		Vector O = r.O; Vector u = r.u;
+		bool in_triangle;
+		Vector A,B,C,e1,e2,N,cros;
+		double denominator,denominator_inv,Beta,gamma,alpha,t;
+
+		for(int i = 0;i<indices.size();i++){
+			TriangleIndices triangle = this->indices[i];
+			A = this->vertices[triangle.vtxi]; 
+			B = this->vertices[triangle.vtxj]; 
+			C = this->vertices[triangle.vtxk];
+			e1 = B-A; e2 = C-A; N = cross(e1,e2);
+
+			denominator = dot(N,u);
+			if(denominator){
+				cros = cross(A-O,u);
+                denominator_inv = 1/denominator;
+                Beta = dot(e2,cros)*denominator_inv;
+                gamma = -dot(e1,cros)*denominator_inv;
+                alpha = 1 - Beta - gamma;
+                t = dot(A-O,N)*denominator_inv;
+                if(t<d && t>=0){
+					in_triangle = ((0<=alpha) && (alpha<=1)) &&
+									   ((0<=Beta)  && (Beta<=1))  &&
+									   ((0<=gamma) && (gamma<=1));
+					if(in_triangle){
+						d = t;
+						inter.length = t;
+						inter.intersects = true;
+						inter.P = O + t*u;
+						inter.albedo = Vector(1.,1.,1.);
+						inter.id = this->id;
+						inter.N = N ;
+						inter.incoming_direction = u;
+					}
+                }
+			}
+
+        }
+        if(inter.intersects) inter.N.normalize();
+        return inter;
+	}
 };
 
 class BoundingBox: public Geometry{
     public:
     Vector Bmin,Bmax,C;
-	// TriangleMesh* Mesh;
-	int id;
+	TriangleMesh* Mesh;
 	BoundingBox(){};
 	
-	BoundingBox(TriangleMesh* Mesh,int start,int end){
-		compute_Bounding_Box(Mesh,start,end);
+	bool in_box(const Vector& O){
+		//returns wether do vector is in the box or not
+		bool condition1 = (O[0]<=this->Bmax[0]) && (O[1]<=this->Bmax[1]) && (O[0]<=this->Bmax[1]);
+		bool condition2 = (O[0]>=this->Bmin[0]) && (O[1]>=this->Bmin[1]) && (O[0]>=this->Bmin[1]);
+		return condition1&&condition2;
 	}
 
-	void compute_Bounding_Box(TriangleMesh* Mesh,int start,int end){
+	BoundingBox(TriangleMesh* _Mesh,int start,int end){
+		this->Mesh = _Mesh;
+		compute_Bounding_Box(_Mesh,start,end);
+	}
+
+	void compute_Bounding_Box(TriangleMesh* _Mesh,int start,int end){
 		//First we get the biggest and smallest values of x,y,z
 		double max_x = 0,max_y = 0,max_z = 0;
 		double min_x = INFINITY,min_y = INFINITY,min_z = INFINITY;
 		
 		for(int i = start;i<end;i++){
-			TriangleIndices triangle = Mesh->indices[i];
-			Vector A = Mesh->vertices[triangle.vtxi]; 
-			Vector B = Mesh->vertices[triangle.vtxj]; 
-			Vector C = Mesh->vertices[triangle.vtxk];
+			TriangleIndices triangle = _Mesh->indices[i];
+			Vector A = _Mesh->vertices[triangle.vtxi]; 
+			Vector B = _Mesh->vertices[triangle.vtxj]; 
+			Vector C = _Mesh->vertices[triangle.vtxk];
 			max_x = std::max({max_x,A[0],B[0],C[0]});
 			max_y = std::max({max_y,A[1],B[1],C[1]});
 			max_z = std::max({max_z,A[2],B[2],C[2]});
@@ -256,11 +308,6 @@ class BoundingBox: public Geometry{
 		double tmin_y = (Bmin[1]-O[1])/u[1];
 		double tmin_z = (Bmin[2]-O[2])/u[2];
 
-		// compute t0 and t1
-		// double t0_x = std::min(tmin_x,tmax_x); double t1_x = std::max(tmin_x,tmax_x);
-		// double t0_y = std::min(tmin_y,tmax_y); double t1_y = std::max(tmin_y,tmax_y);
-		// double t0_z = std::min(tmin_z,tmax_z); double t1_z = std::max(tmin_z,tmax_z);
-
 		double t0_x,t0_y,t0_z,t1_x,t1_y,t1_z;
 		if(tmin_x<tmax_x) {t0_x = tmin_x;t1_x=tmax_x;} else{t0_x = tmax_x;t1_x=tmin_x;}
 		if(tmin_y<tmax_y) {t0_y = tmin_y;t1_y=tmax_y;} else{t0_y = tmax_y;t1_y=tmin_y;}
@@ -271,9 +318,12 @@ class BoundingBox: public Geometry{
 		//if it intersects with the bounding box we check
 		double l = std::max({t0_x,t0_y,t0_z});
 		if (std::min({t1_x,t1_y,t1_z})>l){
+			//BVH
 			inter.intersects = true;
 			inter.length = l;
             inter.id = this->id;
+			//Just one box
+			// inter = this->Mesh->intersect(r);
 		}
 		return inter;
 	}
@@ -289,7 +339,6 @@ class BVH: public Geometry{
 	BVH(){};
 
 	BVH(TriangleMesh* _Mesh,int _start,int _end,int _id){
-		// printf("creating BVH\n");
 		this->lchild = NULL; this->rchild = NULL;
         this->id = _id;
 		this->Mesh = _Mesh; this->start = _start; this->end = _end;
@@ -345,16 +394,19 @@ class BVH: public Geometry{
 	Intersection intersect(const Ray& r){
 		Intersection inter;
 		inter.intersects = false;
+
 		if(!this->value->intersect(r).intersects) return inter;
+
 		std::list<BVH*> nodes_to_visit; nodes_to_visit.push_front(this);
 		double best_distance = INFINITY;
+		Intersection inter_lchild,inter_rchild,inter_with_mesh;
 		while(!nodes_to_visit.empty()){
 			BVH* curr_node = nodes_to_visit.back();
 			nodes_to_visit.pop_back();
 			if(curr_node->lchild){ //if there is a left child we are not in a leaf
 			// not this is a full binary tree
-				Intersection inter_lchild = curr_node->lchild->value->intersect(r);
-				Intersection inter_rchild = curr_node->rchild->value->intersect(r);
+				inter_lchild = curr_node->lchild->value->intersect(r);
+				inter_rchild = curr_node->rchild->value->intersect(r);
 				if(inter_lchild.intersects){
 					if(inter_lchild.length<best_distance){
 						nodes_to_visit.push_back(curr_node->lchild);
@@ -367,7 +419,7 @@ class BVH: public Geometry{
 				}
 			}
 			else{//we are in a leaf
-				Intersection inter_with_mesh;
+				inter_with_mesh;
 				inter_with_mesh = curr_node->intersect_with_mesh(r,curr_node->start,curr_node->end);
 				if(inter_with_mesh.intersects and inter_with_mesh.length < best_distance){
 					best_distance = inter_with_mesh.length;

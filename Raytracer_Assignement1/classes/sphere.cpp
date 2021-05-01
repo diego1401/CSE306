@@ -16,7 +16,7 @@ public:
         };
     Intersection intersect(const Ray& r){
         //treat motion
-        Vector moved_C = this->C+ r.t * motion.speed; //we can do more complex stuff here
+        Vector moved_C = this->C+ r.t * this->motion.speed; //we can do more complex stuff here
         //to put like before just replace by C
         Vector u = r.u;
         Vector O = r.O;

@@ -49,18 +49,18 @@ int main() {
     printf("Drawing...\n");
     #pragma omp parallel for schedule(dynamic, 1)
     for (int i = 0; i < H; i++) {
-        // printf("%d\n",i);
         for (int j = 0; j < W; j++) {
             Vector color;
             double x = j; double y = H - 1 - i;
             for (int i = 0;i<samples;i++){
-                double x1,y1; double t = uniform(engine);
+                double x1,y1;
+                double t = uniform(engine);
                 boxMuller(1,x1,y1);
                 Vector rand_dir = pixel_to_coordinates(Q,W,H,alpha,x+x1,y+y1);
                 Vector q = rand_dir - Q;
                 q.normalize();
                 //Without Dof
-                // Ray r(Q,q); color += scene.getColor(r, max_path_length,n_air);
+                // Ray r(Q,q,t); color += scene.getColor(r, max_path_length,n_air,t);
                 // Implementation of DoF
                 color += scene.getColor(scene.depth_of_field(Q,q,D,aperture,t),max_path_length,n_air,t);
             }
@@ -73,8 +73,11 @@ int main() {
     stbi_write_png("image.png", W, H, 3, &image[0], 0); 
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
     duration<double> time_span = duration_cast<duration<double> >(t2 - t1);
+    // std::chrono::milliseconds time_span = std::chrono::duration_cast< std::chrono::milliseconds >(t2-t1 );
+
     double time = time_span.count();
     std::cout << "It took me " << int(time/60) << " minutes and " << (int(time)%60) << " seconds"; 
+    // std::cout << "It took me " << int(time) << "ms"; 
     std::cout << std::endl;
     printf("finished\n");
     return 0;

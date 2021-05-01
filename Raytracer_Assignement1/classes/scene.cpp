@@ -6,13 +6,12 @@ Scene::Scene(){
     Vector light_center(-10,20,40);
 
     eps = pow(10,-7);
-    Camera = q; light = light_center; I = 2*pow(10,10);light_source_radius = 6;
+    Camera = q; light = light_center; I = 2*pow(10,10);light_source_radius = 5;
     refractive_index_air = 1.0003; refractive_index_ball = 1.5;
     samples = 32;
     
     //All the walls have the same radius
-    double R = 940.;
-    double dist = 1000;
+    double R = 940.; double dist = 1000;
     //colors
     Vector white(255,255,255);Vector blue(0,0,255);Vector red(255,0,0);
     Vector purple(255,0,255); Vector green(0,255,0);Vector cyan(0,255,255);
@@ -49,18 +48,20 @@ Scene::Scene(){
     light_sphere = new Sphere(light_center,light_source_radius,white,trivial_motion,false,-100,true);
 
     //interesting spheres
-    Vector center (10,0,0); Vector center2 (-10,10,0); Vector center3 (-10,10,20); 
+    Vector center (0,10,0); Vector center2 (-10,0,20); Vector center3 (20,0,0); Vector center4 (10,0,-20);
     Geometry* center_sphere; 
-    center_sphere= new Sphere(center,10,purple,trivial_motion,true,-100.,false);
+    center_sphere= new Sphere(center,10,white,ball2,false,-100.,false);
     Geometry* center_sphere2; //refractive sphere
-    center_sphere2= new Sphere(center2,10,white,trivial_motion,false,-100.,false);
+    center_sphere2= new Sphere(center2,10,white,trivial_motion,false,refractive_index_ball,false);
     Geometry*center_sphere3; // Hollow sphere
     center_sphere3 = new Sphere(center3,10,white,trivial_motion,false,refractive_index_ball);
     Geometry*center_sphere4; 
     center_sphere4 = new Sphere(center3,9.5,white,trivial_motion,false,refractive_index_air);
-    
+    Geometry* mirror_sphere; //mirror sphere
+    mirror_sphere= new Sphere(center4,10,white,trivial_motion,true,-100.,false);
 
     int counter = 0; //counter in order to id the objects
+    //scence
 
     left_wall->id = counter; counter++;
     objects.push_back(left_wall);
@@ -76,6 +77,11 @@ Scene::Scene(){
     objects.push_back(back_wall);
     light_sphere->id = counter; counter++;
     objects.push_back(light_sphere);
+
+    //objects 
+
+    //Spheres
+
     // center_sphere->id = counter; counter++;
     // objects.push_back(center_sphere);
     // center_sphere2->id = counter; counter++;
@@ -84,6 +90,8 @@ Scene::Scene(){
     // objects.push_back(center_sphere3);
     // center_sphere4->id = counter; counter++;
     // objects.push_back(center_sphere4);
+    // mirror_sphere->id = counter; counter++;
+    // objects.push_back(mirror_sphere);
 
     //Mr. Cat
     TriangleMesh* cat;
@@ -94,11 +102,22 @@ Scene::Scene(){
     for (int i = 0; i < int(cat->vertices.size()); i++) {
         cat->vertices[i] = 0.6 * cat->vertices[i] + Vector(0, -10, 0);
     }
+    //push just the mesh
+    // cat->id = counter; counter++;
+    // objects.push_back(cat); 
+
+    //just one bounding box
+    // BoundingBox* box;
+    // box = new BoundingBox(cat,0,cat->indices.size());
+    // box->id = counter; counter++;
+    // objects.push_back(box);
+    
     //his cage
     BVH* tree;
     tree = new BVH(cat,0,cat->indices.size(),counter);counter++;
     tree->motion = trivial_motion;
     objects.push_back(tree);
+    
 
     // //draw extremums of the bounding box
     // Geometry* test_sphere2; test_sphere2= new Sphere(box->Bmin,1,red,trivial_motion,false,-100.,false);
@@ -110,7 +129,7 @@ Scene::Scene(){
     };
 
 Vector Scene::direct_light(Vector rho,Intersection& inter,double time){
-        // add direct light
+        // Spherical lights
         Vector D = inter.P - light; D.normalize();
         Vector xprime = light_source_radius * random_cos(D) + light;
         Vector Nprime = (xprime - light); Nprime.normalize();
@@ -125,6 +144,27 @@ Vector Scene::direct_light(Vector rho,Intersection& inter,double time){
                                         * (std::max(dot(Nprime,-1*omega_i),0.))
                                         *(1/(distance_sq*pdf));
         return L;
+
+        // //point light source
+        // Vector omega_i = light - inter.P;
+        // double d = omega_i.norm();
+        // omega_i.normalize();
+        // Vector L;
+        // double visibility;
+        // //compute visibility
+        // Ray visible(inter.P + eps*inter.N,omega_i,time);
+        // Intersection inter_visible = this->intersect(visible);
+        // if(!inter_visible.intersects){
+        //  visibility = 1;
+        // }   
+        // else if(inter_visible.length > d){
+        //     visibility = 1;
+        // }
+        // else visibility = 0;
+
+        // L = rho *(1/M_PI) * visibility  * (I / (4* M_PI*square(d)))
+        //                                 * (std::max(dot(inter.N,omega_i),0.));
+        // return L;
         
     }
 
@@ -187,6 +227,7 @@ bool Scene::Fresnel(Vector omega, Intersection& inter,double& n1,double&n2){
     double R = k0 + (1-k0) * pow_5(1-abs(dot(inter.N,omega)));
     double u = uniform (engine) ;
     return u<R;
+    // return false; //for no fresnel
 }
 
 Vector Scene::getColor(const Ray& ray, int ray_depth,double refr_index,double time,bool last_bounce_diffuse=false){
@@ -194,9 +235,6 @@ Vector Scene::getColor(const Ray& ray, int ray_depth,double refr_index,double ti
         Intersection inter = intersect(ray);
         if (inter.intersects){ 
             Vector omega = inter.incoming_direction;
-            if(inter.id == 11){
-                printf("whattt\n");
-            }
             double n2 = objects[inter.id]->refract_ind;
 
             if(objects[inter.id]->light){ //hit a light source
