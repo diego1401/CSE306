@@ -1,11 +1,12 @@
-#define _CRT_SECURE_NO_WARNINGS 1
-#include <vector>
+// #pragma once
+// #define _CRT_SECURE_NO_WARNINGS 1
+// #include <vector>
  
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb-master/stb_image_write.h"
+// #define STB_IMAGE_WRITE_IMPLEMENTATION
+// #include "stb-master/stb_image_write.h"
  
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb-master/stb_image.h"
+// #define STB_IMAGE_IMPLEMENTATION
+// #include "stb-master/stb_image.h"
 
 //include my classes
 #include "classes/scene.cpp"
@@ -39,9 +40,11 @@ int main() {
     double alpha = M_PI/3;
     double gamma = 2.2;
     Scene scene;
+    scene.samples = 32;
     Vector Q = scene.Camera;
     double D = scene.camera_distance; //distance of the middle white ball
-    scene.aperture = 2.8;
+    // scene.aperture = 2.8;
+    scene.aperture = 0;
     double aperture = scene.aperture;
     double n_air = scene.refractive_index_air;
     int samples = scene.samples;
@@ -60,9 +63,9 @@ int main() {
                 Vector q = rand_dir - Q;
                 q.normalize();
                 //Without Dof
-                // Ray r(Q,q,t); color += scene.getColor(r, max_path_length,n_air,t);
+                Ray r(Q,q,t); color += scene.getColor(r, max_path_length,n_air,t);
                 // Implementation of DoF
-                color += scene.getColor(scene.depth_of_field(Q,q,D,aperture,t),max_path_length,n_air,t);
+                // color += scene.getColor(scene.depth_of_field(Q,q,D,aperture,t),max_path_length,n_air,t);
             }
 
             image[i*W*3+j*3 + 0] = std::min(255,int(pow(color[0]/samples,1./gamma)));

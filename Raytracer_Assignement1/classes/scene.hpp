@@ -13,11 +13,11 @@ public:
     std::vector<Geometry*> objects;
 
     Scene();
-    bool Fresnel(Vector omega, Intersection& inter,double& n1,double&n2);
-    Intersection intersect(Ray r);
-    Ray reflect(Vector omega_i,Intersection& inter,double time);
-    Ray refract(Vector omega_i,Intersection& inter,double n1,double& n2,double time);
-    Vector direct_light(Vector rho,Intersection& inter,double time); 
-    Ray depth_of_field(Vector Q,Vector u,double D,double aperture,double time);
-    Vector getColor(const Ray& ray, int ray_depth, double refr_index,double time,bool last_bounce_diffuse);
+    bool Fresnel(const Vector& omega, Intersection& inter,double& n1,double&n2);
+    Intersection intersect(const Ray& r);
+    Ray reflect(const Vector& omega_i,Intersection& inter,const double& time);
+    Ray refract(const Vector& omega_i,Intersection& inter,double n1,double& n2,const double& time);
+    Vector direct_light(const Vector& rho,Intersection& inter,const double& time); 
+    Ray depth_of_field(const Vector& Q,const Vector& u,const double& D,const double& aperture,const double& time);
+    Vector getColor(const Ray& ray, const int& ray_depth, double refr_index,const double& time,bool last_bounce_diffuse);
 };

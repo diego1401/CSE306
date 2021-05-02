@@ -1,5 +1,12 @@
+#define _CRT_SECURE_NO_WARNINGS 1
+#include <vector>
+ 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/stb-master/stb_image_write.h"
+ 
+#define STB_IMAGE_IMPLEMENTATION
+#include "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/stb-master/stb_image.h"
 #include "geometry.hpp"
-
 class TriangleIndices {
 public:
 	TriangleIndices(int vtxi = -1, int vtxj = -1, int vtxk = -1, int ni = -1, int nj = -1, int nk = -1, int uvi = -1, int uvj = -1, int uvk = -1, int group = -1, bool added = false) : vtxi(vtxi), vtxj(vtxj), vtxk(vtxk), uvi(uvi), uvj(uvj), uvk(uvk), ni(ni), nj(nj), nk(nk), group(group) {
@@ -259,8 +266,8 @@ class BoundingBox: public Geometry{
 	
 	bool in_box(const Vector& O){
 		//returns wether do vector is in the box or not
-		bool condition1 = (O[0]<=this->Bmax[0]) && (O[1]<=this->Bmax[1]) && (O[0]<=this->Bmax[1]);
-		bool condition2 = (O[0]>=this->Bmin[0]) && (O[1]>=this->Bmin[1]) && (O[0]>=this->Bmin[1]);
+		bool condition1 = (O[0]<=this->Bmax[0]) && (O[1]<=this->Bmax[1]) && (O[0]<=this->Bmax[2]);
+		bool condition2 = (O[0]>=this->Bmin[0]) && (O[1]>=this->Bmin[1]) && (O[0]>=this->Bmin[2]);
 		return condition1&&condition2;
 	}
 
@@ -299,6 +306,8 @@ class BoundingBox: public Geometry{
 
 	Intersection intersect(const Ray& r){
 		Vector O = r.O; Vector u = r.u;
+		Intersection inter;
+		inter.intersects = false;
 		//compute tmax
 		double tmax_x = (Bmax[0]-O[0])/u[0];
 		double tmax_y = (Bmax[1]-O[1])/u[1];
@@ -313,8 +322,7 @@ class BoundingBox: public Geometry{
 		if(tmin_y<tmax_y) {t0_y = tmin_y;t1_y=tmax_y;} else{t0_y = tmax_y;t1_y=tmin_y;}
 		if(tmin_z<tmax_z) {t0_z = tmin_z;t1_z=tmax_z;} else{t0_z= tmax_z;t1_z=tmin_z;}
 
-		Intersection inter;
-		inter.intersects = false;
+		
 		//if it intersects with the bounding box we check
 		double l = std::max({t0_x,t0_y,t0_z});
 		if (std::min({t1_x,t1_y,t1_z})>l){
@@ -335,30 +343,34 @@ class BVH: public Geometry{
 	BoundingBox* value;
 	BVH* lchild; BVH* rchild;
 	int start,end,id;
+	unsigned char* texture_map; 
 
 	BVH(){};
 
-	BVH(TriangleMesh* _Mesh,int _start,int _end,int _id){
+	BVH(TriangleMesh* _Mesh,int _start,int _end,int _id,unsigned char* _texture_map){
 		this->lchild = NULL; this->rchild = NULL;
-        this->id = _id;
+        this->id = _id; 
 		this->Mesh = _Mesh; this->start = _start; this->end = _end;
+		this->texture_map = _texture_map;
 		this->value = new BoundingBox(this->Mesh,this->start,this->end);
 		compute_BVH();
 	}
+
 	Intersection intersect_with_mesh(const Ray& r,int start,int end){
 		Intersection inter;
         inter.intersects = false;
         double d = INFINITY;
 		Vector O = r.O; Vector u = r.u;
 		bool in_triangle;
-		Vector A,B,C,e1,e2,N,cros;
+		Vector A,B,C,e1,e2,N,cros,UV;
 		double denominator,denominator_inv,Beta,gamma,alpha,t;
-
+		int x,y;
+		TriangleIndices triangle;
 		for(int i = start;i<end;i++){
-			TriangleIndices triangle = Mesh->indices[i];
-			A = Mesh->vertices[triangle.vtxi]; 
-			B = Mesh->vertices[triangle.vtxj]; 
-			C = Mesh->vertices[triangle.vtxk];
+			triangle = this->Mesh->indices[i];
+			A = this->Mesh->vertices[triangle.vtxi]; 
+			B = this->Mesh->vertices[triangle.vtxj]; 
+			C = this->Mesh->vertices[triangle.vtxk];
 			e1 = B-A; e2 = C-A; N = cross(e1,e2);
 
 			denominator = dot(N,u);
@@ -371,23 +383,40 @@ class BVH: public Geometry{
                 t = dot(A-O,N)*denominator_inv;
                 if(t<d && t>=0){
 					in_triangle = ((0<=alpha) && (alpha<=1)) &&
-									   ((0<=Beta)  && (Beta<=1))  &&
-									   ((0<=gamma) && (gamma<=1));
+								  ((0<=Beta)  && (Beta<=1))  &&
+								  ((0<=gamma) && (gamma<=1));
 					if(in_triangle){
 						d = t;
 						inter.length = t;
 						inter.intersects = true;
 						inter.P = O + t*u;
-						inter.albedo = Vector(1.,1.,1.);
-						inter.id = this->id;
-						inter.N = N ;
 						inter.incoming_direction = u;
+						inter.N = alpha * this->Mesh->normals[triangle.ni]
+								 + Beta * this->Mesh->normals[triangle.nj]
+								 + gamma* this->Mesh->normals[triangle.nk];
+
+						UV= alpha * this->Mesh->uvs[triangle.uvi]
+						   + Beta * this->Mesh->uvs[triangle.uvj]
+						   + gamma* this->Mesh->uvs[triangle.uvk];
+						// printf("%f\n",pow(this->texture_map[int(UV[1]*512*3) + int(UV[0]*3) + 0],2.2));
+						x = UV[0]*512; y =  UV[1]*1024;
+						x = std::max(std::min(x,512),0);y = 1024 - 1 - std::max(std::min(y,1024),0);
+						
+						// printf("x=%d,y=%d\n",x,y);
+						// UV.print_vector();
+						inter.albedo[0] = pow(this->texture_map[int(y*512*3 + x*3) + 0]/255.,2.2);
+						inter.albedo[1] = pow(this->texture_map[int(y*512*3 + x*3 )+ 1]/255.,2.2);
+						inter.albedo[2] = pow(this->texture_map[int(y*512*3 + x*3) + 2]/255.,2.2);
 					}
                 }
 			}
 
         }
-        if(inter.intersects) inter.N.normalize();
+        if(inter.intersects){
+			inter.N.normalize();
+			inter.id = this->id;
+			// inter.albedo = Vector(1.,1.,1.);
+		} 
         return inter;
 	}
 
@@ -398,10 +427,11 @@ class BVH: public Geometry{
 		if(!this->value->intersect(r).intersects) return inter;
 
 		std::list<BVH*> nodes_to_visit; nodes_to_visit.push_front(this);
-		double best_distance = INFINITY;
+		double best_distance = std :: numeric_limits<double >::max() ;
 		Intersection inter_lchild,inter_rchild,inter_with_mesh;
+		BVH* curr_node;
 		while(!nodes_to_visit.empty()){
-			BVH* curr_node = nodes_to_visit.back();
+			curr_node = nodes_to_visit.back();
 			nodes_to_visit.pop_back();
 			if(curr_node->lchild){ //if there is a left child we are not in a leaf
 			// not this is a full binary tree
@@ -421,7 +451,7 @@ class BVH: public Geometry{
 			else{//we are in a leaf
 				inter_with_mesh;
 				inter_with_mesh = curr_node->intersect_with_mesh(r,curr_node->start,curr_node->end);
-				if(inter_with_mesh.intersects and inter_with_mesh.length < best_distance){
+				if(inter_with_mesh.intersects && inter_with_mesh.length < best_distance){
 					best_distance = inter_with_mesh.length;
 					inter = inter_with_mesh;
 					}
@@ -444,7 +474,7 @@ class BVH: public Geometry{
 		}
 		if(pivot_index<=this->start || pivot_index>=this->end-1 || (this->end)- (this->start)<5) return;
 
-		this->lchild = new BVH(this->Mesh,this->start,pivot_index,this->id);
-		this->rchild = new BVH(this->Mesh,pivot_index,this->end,this->id);
+		this->lchild = new BVH(this->Mesh,this->start,pivot_index,this->id,this->texture_map);
+		this->rchild = new BVH(this->Mesh,pivot_index,this->end,this->id,this->texture_map);
 	}
 };

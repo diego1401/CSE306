@@ -8,7 +8,6 @@ Scene::Scene(){
     eps = pow(10,-7);
     Camera = q; light = light_center; I = 2*pow(10,10);light_source_radius = 5;
     refractive_index_air = 1.0003; refractive_index_ball = 1.5;
-    samples = 32;
     
     //All the walls have the same radius
     double R = 940.; double dist = 1000;
@@ -94,14 +93,19 @@ Scene::Scene(){
     // objects.push_back(mirror_sphere);
 
     //Mr. Cat
-    TriangleMesh* cat;
-    cat = new TriangleMesh;
+    TriangleMesh* mesh;
+    mesh = new TriangleMesh;
     const char* file_name = "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/classes/cat/cat.obj"; 
-    // cat->motion = trivial_motion;
-    cat->readOBJ(file_name); 
-    for (int i = 0; i < int(cat->vertices.size()); i++) {
-        cat->vertices[i] = 0.6 * cat->vertices[i] + Vector(0, -10, 0);
+    const char* texture = "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/classes/cat/cat_diff.png";
+    mesh->readOBJ(file_name); 
+    //cat transformation
+    for (int i = 0; i < int(mesh->vertices.size()); i++) {
+        mesh->vertices[i] = 0.6 * mesh->vertices[i] + Vector(0, -10, 0);
     }
+    //fox transformation
+    // for (int i = 0; i < int(mesh->vertices.size()); i++) {
+    //     mesh->vertices[i] = 0.2 * mesh->vertices[i] + Vector(0, -10, 20);
+    // }
     //push just the mesh
     // cat->id = counter; counter++;
     // objects.push_back(cat); 
@@ -113,9 +117,12 @@ Scene::Scene(){
     // objects.push_back(box);
     
     //his cage
+    
     BVH* tree;
-    tree = new BVH(cat,0,cat->indices.size(),counter);counter++;
+    int H = 1024; int W = 512; int c = 1;int channels = 3;
+    tree = new BVH(mesh,0,mesh->indices.size(),counter,stbi_load(texture,&H,&W,&c,channels));counter++;
     tree->motion = trivial_motion;
+    
     objects.push_back(tree);
     
 
@@ -128,7 +135,7 @@ Scene::Scene(){
     // objects.push_back(test_sphere3);    
     };
 
-Vector Scene::direct_light(Vector rho,Intersection& inter,double time){
+Vector Scene::direct_light(const Vector& rho,Intersection& inter,const double& time){
         // Spherical lights
         Vector D = inter.P - light; D.normalize();
         Vector xprime = light_source_radius * random_cos(D) + light;
@@ -168,13 +175,15 @@ Vector Scene::direct_light(Vector rho,Intersection& inter,double time){
         
     }
 
-Intersection Scene::intersect(Ray r){
+Intersection Scene::intersect(const Ray& r){
         Intersection inter;
         inter.intersects = false;
         double d = INFINITY;
+        Intersection tmp_inter;
+        Geometry* object;
         for(std::vector<Geometry*>::iterator it = objects.begin(); it != objects.end(); ++it) { 
-            Geometry* object = *it;
-            Intersection tmp_inter = object->intersect(r);
+            object = *it;
+            tmp_inter = object->intersect(r);
             if(tmp_inter.intersects){
                 if(tmp_inter.length < d){
                     inter = tmp_inter; d = inter.length;
@@ -184,13 +193,13 @@ Intersection Scene::intersect(Ray r){
         return inter;
     }
 
-Ray Scene::reflect(Vector omega_i,Intersection& inter,double time){
+Ray Scene::reflect(const Vector& omega_i,Intersection& inter,const double& time){
     Vector omega_r = omega_i - 2* dot(omega_i,inter.N)* inter.N;
     Ray reflected_ray(inter.P + eps*inter.N,omega_r,time);
     return reflected_ray;
 }
 
-Ray Scene::refract(Vector omega,Intersection& inter,double n1,double& n2,double time){
+Ray Scene::refract(const Vector& omega,Intersection& inter,double n1,double& n2,const double& time){
         double ratio = n1/n2;
         double d = dot(omega,inter.N);
         Vector omega_T = ratio * (omega - d*inter.N);
@@ -209,7 +218,7 @@ Ray Scene::refract(Vector omega,Intersection& inter,double n1,double& n2,double 
         return refracted_ray;
 }
 
-bool Scene::Fresnel(Vector omega, Intersection& inter,double& n1,double&n2){
+bool Scene::Fresnel(const Vector& omega, Intersection& inter,double& n1,double&n2){
     //Returns a boolean such that true  -> refractive
     //                            false -> reflective
     //passing inter and n2 as reference because we change them
@@ -230,7 +239,7 @@ bool Scene::Fresnel(Vector omega, Intersection& inter,double& n1,double&n2){
     // return false; //for no fresnel
 }
 
-Vector Scene::getColor(const Ray& ray, int ray_depth,double refr_index,double time,bool last_bounce_diffuse=false){
+Vector Scene::getColor(const Ray& ray, const int& ray_depth,double refr_index,const double& time,bool last_bounce_diffuse=false){
     if (ray_depth >= 0){
         Intersection inter = intersect(ray);
         if (inter.intersects){ 
@@ -264,7 +273,7 @@ Vector Scene::getColor(const Ray& ray, int ray_depth,double refr_index,double ti
     return Vector(0.,0.,0.); // we terminate when ray_depth is less than 0
 };
 
-Ray Scene::depth_of_field(Vector Q, Vector u,double D,double aperture,double time){
+Ray Scene::depth_of_field(const Vector& Q, const Vector& u,const double &D,const double& aperture,const double& time){
     // The formulas had to be changed a bit
     Vector P = Q + (D/abs(u[2])) * u;
     double r = uniform (engine)  ; r = sqrt(r)* aperture;
