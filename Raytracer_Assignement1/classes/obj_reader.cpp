@@ -7,6 +7,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/stb-master/stb_image.h"
 #include "geometry.hpp"
+
 class TriangleIndices {
 public:
 	TriangleIndices(int vtxi = -1, int vtxj = -1, int vtxk = -1, int ni = -1, int nj = -1, int nk = -1, int uvi = -1, int uvj = -1, int uvk = -1, int group = -1, bool added = false) : vtxi(vtxi), vtxj(vtxj), vtxk(vtxk), uvi(uvi), uvj(uvj), uvk(uvk), ni(ni), nj(nj), nk(nk), group(group) {

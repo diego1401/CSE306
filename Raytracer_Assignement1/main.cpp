@@ -40,11 +40,11 @@ int main() {
     double alpha = M_PI/3;
     double gamma = 2.2;
     Scene scene;
-    scene.samples = 32;
+    scene.samples = 1000;
     Vector Q = scene.Camera;
     double D = scene.camera_distance; //distance of the middle white ball
-    // scene.aperture = 2.8;
-    scene.aperture = 0;
+    scene.aperture = 2.8;
+    // scene.aperture = 0;
     double aperture = scene.aperture;
     double n_air = scene.refractive_index_air;
     int samples = scene.samples;

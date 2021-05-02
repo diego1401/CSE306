@@ -47,9 +47,9 @@ Scene::Scene(){
     light_sphere = new Sphere(light_center,light_source_radius,white,trivial_motion,false,-100,true);
 
     //interesting spheres
-    Vector center (0,10,0); Vector center2 (-10,0,20); Vector center3 (20,0,0); Vector center4 (10,0,-20);
+    Vector center (10,0,0); Vector center2 (-10,0,20); Vector center3 (20,0,0); Vector center4 (10,0,-20);
     Geometry* center_sphere; 
-    center_sphere= new Sphere(center,10,white,ball2,false,-100.,false);
+    center_sphere= new Sphere(center,10,white,trivial_motion,true,-100.,false);
     Geometry* center_sphere2; //refractive sphere
     center_sphere2= new Sphere(center2,10,white,trivial_motion,false,refractive_index_ball,false);
     Geometry*center_sphere3; // Hollow sphere
@@ -81,8 +81,8 @@ Scene::Scene(){
 
     //Spheres
 
-    // center_sphere->id = counter; counter++;
-    // objects.push_back(center_sphere);
+    center_sphere->id = counter; counter++;
+    objects.push_back(center_sphere);
     // center_sphere2->id = counter; counter++;
     // objects.push_back(center_sphere2);
     // center_sphere3->id = counter; counter++;
@@ -97,9 +97,10 @@ Scene::Scene(){
     mesh = new TriangleMesh;
     //THESE NAMES ARE TO BE CHANGED IN ORDERED TO SWITCH MESHES
     // AS WELL AS UNCOMMENTING THE CORRECT TRANSFORMATION
-
-    const char* file_name = "classes/fox/fox.obj"; 
-    const char* texture = "classes/fox/fox_diff.png";
+    const char* file_name = "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/classes/fox/fox.obj"; 
+    const char* texture = "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/classes/fox/fox_diff.png";
+    // const char* file_name = "classes/fox/fox.obj"; 
+    // const char* texture = "classes/fox/fox_diff.png";
     mesh->readOBJ(file_name); 
     printf("number of triangles %d\n",int(mesh->vertices.size()));
     //cat transformation
@@ -108,7 +109,7 @@ Scene::Scene(){
     // }
     //fox transformation
     for (int i = 0; i < int(mesh->vertices.size()); i++) {
-        mesh->vertices[i] = 0.2 * mesh->vertices[i] + Vector(0, -10, 20);
+        mesh->vertices[i] = 0.2 * mesh->vertices[i] + Vector(-10, -10, 20);
     }
 
     //push just the mesh
