@@ -95,17 +95,22 @@ Scene::Scene(){
     //Mr. Cat
     TriangleMesh* mesh;
     mesh = new TriangleMesh;
-    const char* file_name = "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/classes/cat/cat.obj"; 
-    const char* texture = "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/classes/cat/cat_diff.png";
+    //THESE NAMES ARE TO BE CHANGED IN ORDERED TO SWITCH MESHES
+    // AS WELL AS UNCOMMENTING THE CORRECT TRANSFORMATION
+
+    const char* file_name = "classes/fox/fox.obj"; 
+    const char* texture = "classes/fox/fox_diff.png";
     mesh->readOBJ(file_name); 
+    printf("number of triangles %d\n",int(mesh->vertices.size()));
     //cat transformation
-    for (int i = 0; i < int(mesh->vertices.size()); i++) {
-        mesh->vertices[i] = 0.6 * mesh->vertices[i] + Vector(0, -10, 0);
-    }
-    //fox transformation
     // for (int i = 0; i < int(mesh->vertices.size()); i++) {
-    //     mesh->vertices[i] = 0.2 * mesh->vertices[i] + Vector(0, -10, 20);
+    //     mesh->vertices[i] = 0.6 * mesh->vertices[i] + Vector(0, -10, 0);
     // }
+    //fox transformation
+    for (int i = 0; i < int(mesh->vertices.size()); i++) {
+        mesh->vertices[i] = 0.2 * mesh->vertices[i] + Vector(0, -10, 20);
+    }
+
     //push just the mesh
     // cat->id = counter; counter++;
     // objects.push_back(cat); 
