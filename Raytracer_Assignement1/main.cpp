@@ -1,13 +1,3 @@
-// #pragma once
-// #define _CRT_SECURE_NO_WARNINGS 1
-// #include <vector>
- 
-// #define STB_IMAGE_WRITE_IMPLEMENTATION
-// #include "stb-master/stb_image_write.h"
- 
-// #define STB_IMAGE_IMPLEMENTATION
-// #include "stb-master/stb_image.h"
-
 //include my classes
 #include "classes/scene.cpp"
 #include <chrono>
@@ -40,7 +30,7 @@ int main() {
     double alpha = M_PI/3;
     double gamma = 2.2;
     Scene scene;
-    scene.samples = 1000;
+    scene.samples = 5;
     Vector Q = scene.Camera;
     double D = scene.camera_distance; //distance of the middle white ball
     scene.aperture = 2.8;

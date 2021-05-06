@@ -97,8 +97,8 @@ Scene::Scene(){
     mesh = new TriangleMesh;
     //THESE NAMES ARE TO BE CHANGED IN ORDERED TO SWITCH MESHES
     // AS WELL AS UNCOMMENTING THE CORRECT TRANSFORMATION
-    const char* file_name = "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/classes/fox/fox.obj"; 
-    const char* texture = "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/classes/fox/fox_diff.png";
+    const char* file_name = "classes/fox/fox.obj"; 
+    const char* texture = "classes/fox/fox_diff.png";
     // const char* file_name = "classes/fox/fox.obj"; 
     // const char* texture = "classes/fox/fox_diff.png";
     mesh->readOBJ(file_name); 

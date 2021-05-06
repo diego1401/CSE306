@@ -2,10 +2,10 @@
 #include <vector>
  
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/stb-master/stb_image_write.h"
+#include "../stb-master/stb_image_write.h"
  
 #define STB_IMAGE_IMPLEMENTATION
-#include "/Users/Diego/Documents/SEM6/CSE306/Raytracer_Assignement1/stb-master/stb_image.h"
+#include "../stb-master/stb_image.h"
 #include "geometry.hpp"
 
 class TriangleIndices {

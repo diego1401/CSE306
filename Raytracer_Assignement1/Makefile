@@ -6,4 +6,4 @@ exec:  $(OBJECTS)
 	$(CXX) $(FLAGS) main.cpp -o exec 
 	
 clean :
-	rm $(OBJECTS) exec main
+	rm $(OBJECTS) exec
