@@ -8,6 +8,8 @@ Scene::Scene(){
     eps = pow(10,-7);
     Camera = q; light = light_center; I = 2*pow(10,10);light_source_radius = 5;
     refractive_index_air = 1.0003; refractive_index_ball = 1.5;
+    // p_s = 0.1 * Vector(1.,1.,1.);  alpha = 10; 
+    samples = 32;
     
     //All the walls have the same radius
     double R = 940.; double dist = 1000;
@@ -81,8 +83,8 @@ Scene::Scene(){
 
     //Spheres
 
-    center_sphere->id = counter; counter++;
-    objects.push_back(center_sphere);
+    // center_sphere->id = counter; counter++;
+    // objects.push_back(center_sphere);
     // center_sphere2->id = counter; counter++;
     // objects.push_back(center_sphere2);
     // center_sphere3->id = counter; counter++;
@@ -97,20 +99,26 @@ Scene::Scene(){
     mesh = new TriangleMesh;
     //THESE NAMES ARE TO BE CHANGED IN ORDERED TO SWITCH MESHES
     // AS WELL AS UNCOMMENTING THE CORRECT TRANSFORMATION
-    const char* file_name = "classes/fox/fox.obj"; 
-    const char* texture = "classes/fox/fox_diff.png";
+    const char* file_name = "classes/cat/cat.obj"; 
+    const char* texture = "classes/cat/cat_diff.png";
     // const char* file_name = "classes/fox/fox.obj"; 
     // const char* texture = "classes/fox/fox_diff.png";
+
     mesh->readOBJ(file_name); 
+    mesh->Phong = true;
+    mesh->p_s = 0.1 * Vector(1.,1.,1.);  mesh->alpha = 100; 
+    mesh->id = counter; counter++;
+    mesh->motion = trivial_motion;
     printf("number of triangles %d\n",int(mesh->vertices.size()));
     //cat transformation
-    // for (int i = 0; i < int(mesh->vertices.size()); i++) {
-    //     mesh->vertices[i] = 0.6 * mesh->vertices[i] + Vector(0, -10, 0);
-    // }
-    //fox transformation
     for (int i = 0; i < int(mesh->vertices.size()); i++) {
-        mesh->vertices[i] = 0.2 * mesh->vertices[i] + Vector(-10, -10, 20);
+        mesh->vertices[i] = 0.6 * mesh->vertices[i] + Vector(0, -10, 0);
     }
+
+    //fox transformation
+    // for (int i = 0; i < int(mesh->vertices.size()); i++) {
+    //     mesh->vertices[i] = 0.2 * mesh->vertices[i] + Vector(-10, -10, 20);
+    // }
 
     //push just the mesh
     // cat->id = counter; counter++;
@@ -122,26 +130,14 @@ Scene::Scene(){
     // box->id = counter; counter++;
     // objects.push_back(box);
     
-    //his cage
-    
+    // his cage
     BVH* tree;
     int H = 1024; int W = 512; int c = 1;int channels = 3;
-    tree = new BVH(mesh,0,mesh->indices.size(),counter,stbi_load(texture,&H,&W,&c,channels));counter++;
-    tree->motion = trivial_motion;
-    
-    objects.push_back(tree);
-    
-
-    // //draw extremums of the bounding box
-    // Geometry* test_sphere2; test_sphere2= new Sphere(box->Bmin,1,red,trivial_motion,false,-100.,false);
-    // Geometry* test_sphere3; test_sphere3= new Sphere(box->Bmax,1,white,trivial_motion,false,-100.,false);
-    // test_sphere2->id = counter; counter++;
-    // objects.push_back(test_sphere2);
-    // test_sphere3->id = counter; counter++;
-    // objects.push_back(test_sphere3);    
+    tree = new BVH(mesh,0,mesh->indices.size(),stbi_load(texture,&H,&W,&c,channels));
+    objects.push_back(tree);  
     };
 
-Vector Scene::direct_light(const Vector& rho,Intersection& inter,const double& time){
+Vector Scene::direct_light(Vector& omega_o, Vector& H,Intersection& inter,const double& time){
         // Spherical lights
         Vector D = inter.P - light; D.normalize();
         Vector xprime = light_source_radius * random_cos(D) + light;
@@ -151,33 +147,46 @@ Vector Scene::direct_light(const Vector& rho,Intersection& inter,const double& t
         Intersection inter_visible = intersect(visible);
         double visibility = !inter_visible.intersects or objects[inter_visible.id]->light; //if we touch the light
         double pdf = dot(Nprime,D)/ (M_PI * square(light_source_radius));
-        Vector L;
-        L = rho *(1/M_PI) * visibility  * (I / (4* square(M_PI*light_source_radius)))
-                                        * (std::max(dot(inter.N,omega_i),0.))
-                                        * (std::max(dot(Nprime,-1*omega_i),0.))
-                                        *(1/(distance_sq*pdf));
+
+        double expr = 1/pdf * (std::max(dot(inter.N,omega_i),0.))
+                            * (std::max(dot(Nprime,-1*omega_i),0.));
+        Vector L,BDRF;
+        if(objects[inter.id]->diffusive){
+            BDRF = inter.albedo*(1/M_PI);
+            BDRF *= expr;
+        } 
+        else if(objects[inter.id]->Phong){
+            H = random_pow(inter.N,objects[inter.id]->alpha); H.normalize();
+            omega_o =  omega_i - 2* dot(omega_i,H)* H; omega_o.normalize();
+            BDRF = inter.albedo*(1/(M_PI)) *expr
+                 + objects[inter.id]->p_s * ((objects[inter.id]->alpha + 8)/(objects[inter.id]->alpha+1)) *std::max(0., dot(omega_o,H)); 
+                 //we already divided by the pdf
+            
+        }
+        L = BDRF * visibility  * (I/ (4*distance_sq* square(M_PI*light_source_radius)));
         return L;
+        /*
+        //point light source
+        Vector omega_i = light - inter.P;
+        double d = omega_i.norm();
+        omega_i.normalize();
+        Vector L;
+        double visibility;
+        //compute visibility
+        Ray visible(inter.P + eps*inter.N,omega_i,time);
+        Intersection inter_visible = this->intersect(visible);
+        if(!inter_visible.intersects){
+         visibility = 1;
+        }   
+        else if(inter_visible.length > d){
+            visibility = 1;
+        }
+        else visibility = 0;
 
-        // //point light source
-        // Vector omega_i = light - inter.P;
-        // double d = omega_i.norm();
-        // omega_i.normalize();
-        // Vector L;
-        // double visibility;
-        // //compute visibility
-        // Ray visible(inter.P + eps*inter.N,omega_i,time);
-        // Intersection inter_visible = this->intersect(visible);
-        // if(!inter_visible.intersects){
-        //  visibility = 1;
-        // }   
-        // else if(inter_visible.length > d){
-        //     visibility = 1;
-        // }
-        // else visibility = 0;
-
-        // L = rho *(1/M_PI) * visibility  * (I / (4* M_PI*square(d)))
-        //                                 * (std::max(dot(inter.N,omega_i),0.));
-        // return L;
+        L = rho *(1/M_PI) * visibility  * (I / (4* M_PI*square(d)))
+                                        * (std::max(dot(inter.N,omega_i),0.));
+        return L;
+        */
         
     }
 
@@ -256,22 +265,46 @@ Vector Scene::getColor(const Ray& ray, const int& ray_depth,double refr_index,co
                 if(last_bounce_diffuse){return Vector(0,0,0);}
                 return Vector(1.,1.,1.)* (I/ (4.*square(M_PI*light_source_radius)));
             }
-            if (objects[inter.id]->mirror) // we reflect
+            if (objects[inter.id]->mirror) //Mirror surfaces
             {
                 return getColor(reflect(omega,inter,time),(ray_depth-1),refr_index,time); 
             }
-            else if (n2>0.) // sphere is refractive
+            else if (n2>0.) //Refractive surfaces
             {   
                 if(Fresnel(omega,inter,refr_index,n2)){
                     return getColor(reflect(omega,inter,time),(ray_depth-1),refr_index,time); //reflection
                 }
                 return getColor(refract(omega,inter,refr_index,n2,time),(ray_depth-1),n2,time);
             }
-            else{ //diffusive surfaces
+            else if(objects[inter.id]->diffusive){ //diffusive surfaces
                 //implementation of soft shadows in direct_light
-                Vector Lo = direct_light(inter.albedo,inter,time);
+                Vector omega_o,H;
+                Vector Lo = direct_light(omega_o,H,inter,time);
                 Ray randomRay(inter.P+eps*inter.N,random_cos(inter.N),time);
                 Lo += element_wise_product(inter.albedo,getColor(randomRay,ray_depth-1,refr_index,time,true));
+                return Lo;
+            }
+            else if(objects[inter.id]->Phong){ //Phong surfaces
+                Vector omega_o,sampled_H;
+                Vector Lo = direct_light(omega_o,sampled_H,inter,time);
+                Vector p_d = inter.albedo;
+                double diffusive_probability = p_d.norm()/(p_d + objects[inter.id]->p_s).norm();
+                if(uniform(engine)<diffusive_probability){ //diffuse
+                    Ray randomRay(inter.P+eps*inter.N,random_cos(inter.N),time);
+                    Lo += element_wise_product(inter.albedo*(1/diffusive_probability),
+                                getColor(randomRay,ray_depth-1,refr_index,time,true));
+                }
+                else{ //specular
+                    omega_o = omega - 2* dot(omega,sampled_H)* sampled_H; omega_o.normalize();
+                    Ray randomRay(inter.P+eps*inter.N,omega_o,time);
+                    if(dot(randomRay.u,inter.N)<0) return Vector(0.,0.,0.);
+                    // Vector BDRF_indirect = Blinn_PhongBRDF_specular(this->p_s,this->alpha,randomRay.u,sampled_H);
+                    Vector BDRF_indirect = objects[inter.id]->p_s* ((objects[inter.id]->alpha + 8)/(objects[inter.id]->alpha+1)) 
+                                        * std::max(0., dot(omega_o,sampled_H));
+                    Lo += element_wise_product(BDRF_indirect* (1/(1-diffusive_probability)), 
+                            std::max(0.,dot(inter.N,randomRay.u)) 
+                            *getColor(randomRay,ray_depth-1,refr_index,time)); 
+                }
                 return Lo;
             } 
         }

@@ -30,7 +30,7 @@ int main() {
     double alpha = M_PI/3;
     double gamma = 2.2;
     Scene scene;
-    scene.samples = 5;
+    // scene.samples = 5;
     Vector Q = scene.Camera;
     double D = scene.camera_distance; //distance of the middle white ball
     scene.aperture = 2.8;

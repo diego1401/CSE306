@@ -33,7 +33,7 @@ public:
 		Vector A = vertices[triangle.vtxi]; 
 		Vector B = vertices[triangle.vtxj]; 
 		Vector C = vertices[triangle.vtxk]; 
-		return (A+B+C)*(0.3333333);
+		return (A+B+C)*(1./3.);
 	}
 
 	void readOBJ(const char* obj) {
@@ -325,12 +325,12 @@ class BoundingBox: public Geometry{
 
 		
 		//if it intersects with the bounding box we check
-		double l = std::max({t0_x,t0_y,t0_z});
-		if (std::min({t1_x,t1_y,t1_z})>l){
+		double l = std::max(t0_x,std::max(t0_y,t0_z));
+		if (std::min(t1_x,std::min(t1_y,t1_z))>l){
 			//BVH
 			inter.intersects = true;
 			inter.length = l;
-            inter.id = this->id;
+            // inter.id = this->id;
 			//Just one box
 			// inter = this->Mesh->intersect(r);
 		}
@@ -343,15 +343,17 @@ class BVH: public Geometry{
 	TriangleMesh* Mesh;
 	BoundingBox* value;
 	BVH* lchild; BVH* rchild;
-	int start,end,id;
+	int start,end;
 	unsigned char* texture_map; 
 
 	BVH(){};
 
-	BVH(TriangleMesh* _Mesh,int _start,int _end,int _id,unsigned char* _texture_map){
+	BVH(TriangleMesh* _Mesh,int _start,int _end,unsigned char* _texture_map){
 		this->lchild = NULL; this->rchild = NULL;
-        this->id = _id; 
 		this->Mesh = _Mesh; this->start = _start; this->end = _end;
+		this->id = this->Mesh->id;
+		this->Phong = this->Mesh->Phong; this->p_s = this->Mesh->p_s; this->alpha = this->Mesh->alpha;
+		this->motion = this->Mesh->motion;
 		this->texture_map = _texture_map;
 		this->value = new BoundingBox(this->Mesh,this->start,this->end);
 		compute_BVH();
@@ -399,12 +401,10 @@ class BVH: public Geometry{
 						UV= alpha * this->Mesh->uvs[triangle.uvi]
 						   + Beta * this->Mesh->uvs[triangle.uvj]
 						   + gamma* this->Mesh->uvs[triangle.uvk];
-						// printf("%f\n",pow(this->texture_map[int(UV[1]*512*3) + int(UV[0]*3) + 0],2.2));
+						
 						x = UV[0]*512; y =  UV[1]*1024;
 						x = std::max(std::min(x,512),0);y = 1024 - 1 - std::max(std::min(y,1024),0);
 						
-						// printf("x=%d,y=%d\n",x,y);
-						// UV.print_vector();
 						inter.albedo[0] = pow(this->texture_map[int(y*512*3 + x*3) + 0]/255.,2.2);
 						inter.albedo[1] = pow(this->texture_map[int(y*512*3 + x*3 )+ 1]/255.,2.2);
 						inter.albedo[2] = pow(this->texture_map[int(y*512*3 + x*3) + 2]/255.,2.2);
@@ -435,22 +435,21 @@ class BVH: public Geometry{
 			curr_node = nodes_to_visit.back();
 			nodes_to_visit.pop_back();
 			if(curr_node->lchild){ //if there is a left child we are not in a leaf
-			// not this is a full binary tree
+			// note that this is a full binary tree
 				inter_lchild = curr_node->lchild->value->intersect(r);
 				inter_rchild = curr_node->rchild->value->intersect(r);
 				if(inter_lchild.intersects){
-					if(inter_lchild.length<best_distance){
-						nodes_to_visit.push_back(curr_node->lchild);
+						if(inter_lchild.length<best_distance){
+							nodes_to_visit.push_back(curr_node->lchild);
+						}
 					}
-				}
-				if(inter_rchild.intersects){
-					if(inter_rchild.length<best_distance){
-						nodes_to_visit.push_back(curr_node->rchild);
-					} 
-				}
+					if(inter_rchild.intersects){
+						if(inter_rchild.length<best_distance){
+							nodes_to_visit.push_back(curr_node->rchild);
+						} 
+					}
 			}
 			else{//we are in a leaf
-				inter_with_mesh;
 				inter_with_mesh = curr_node->intersect_with_mesh(r,curr_node->start,curr_node->end);
 				if(inter_with_mesh.intersects && inter_with_mesh.length < best_distance){
 					best_distance = inter_with_mesh.length;
@@ -473,9 +472,10 @@ class BVH: public Geometry{
 				pivot_index ++;
 			}
 		}
-		if(pivot_index<=this->start || pivot_index>=this->end-1 || (this->end)- (this->start)<5) return;
-
-		this->lchild = new BVH(this->Mesh,this->start,pivot_index,this->id,this->texture_map);
-		this->rchild = new BVH(this->Mesh,pivot_index,this->end,this->id,this->texture_map);
+		if(pivot_index<=this->start || pivot_index>=this->end-1 || (this->end - this->start)<5) {
+			return;
+		}
+		this->lchild = new BVH(this->Mesh,this->start,pivot_index,this->texture_map);
+		this->rchild = new BVH(this->Mesh,pivot_index,this->end,this->texture_map);
 	}
 };

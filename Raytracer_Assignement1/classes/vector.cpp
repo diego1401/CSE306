@@ -32,7 +32,7 @@ public :
         printf("(%f,%f,%f)\n",coords[0],coords[1],coords[2]);
     }
     int argmax(){
-        double max = std::max({coords[0],coords[1],coords[2]});
+        double max = std::max(coords[0],std::max(coords[1],coords[2]));
         for(int i=0;i<3;i++){
             if(coords[i]==max) return i;
         }
@@ -152,6 +152,53 @@ Vector random_cos(const Vector& N){
     return x * T1 + y * T2 + z *N;
 }
 
+Vector random_pow(const Vector&N, const double& alpha){
+    double min = N[0];double argmin = 0;
+    for (int i=1;i<3;i++){
+        if(abs(N[i])<min){
+            min = N[i];
+            argmin = i;
+        }
+    }
+    Vector T1;
+    if(argmin==0) T1 = Vector(0,N[2],-N[1]);
+    else if(argmin==1) T1 = Vector(-N[2],0,N[0]);
+    else if(argmin==2) T1 = Vector(-N[1],N[0],0);
+
+    //Makes it a bit faster to comment it but colors change a little bit
+    T1.normalize();
+
+    //Use Box-Muller formula
+    double r1 = uniform (engine) ;
+    double r2 = uniform (engine) ;
+
+    double z = pow(r2,1/(alpha+1));
+    double c1 = sqrt(1-z*z);
+    double x = cos(2*M_PI*r1) * c1;
+    double y = sin(2*M_PI*r1) * c1;
+
+    Vector T2 = cross(T1,N);
+    return x * T1 + y * T2 + z *N; // return H
+}
+
+// Vector Blinn_PhongBRDF(Vector& p_d, Vector& p_s, 
+//         const double& alpha, const Vector& omega_o,const Vector& H,const double& expr){
+//     // double diffusive_prob = p_d.norm()/(p_d.norm() + p_s[0]);
+//     // double diffusive_prob = 1-p_s[0];
+//     double diffusive_prob = p_d.norm() /(p_d + p_s).norm();
+//     if(uniform(engine)<diffusive_prob){
+//         return p_d*(1/(M_PI*diffusive_prob)) * expr;
+//     }
+//     else{
+//         return p_s * ((alpha + 8)/(alpha+1)) *std::max(0., dot(omega_o,H))* (1/(1-diffusive_prob)) ;
+//     }
+//     return Vector(0.,0.,0.);
+// }
+
+// Vector Blinn_PhongBRDF_specular(const Vector& p_s, const double& alpha,
+//                                 const Vector& omega_o,const Vector& H){
+//     return p_s* ((alpha + 8)/(alpha+1)) * std::max(0., dot(omega_o,H));
+// }
 struct Motion{
     double t;
     Vector location;

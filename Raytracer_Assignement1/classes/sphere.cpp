@@ -13,6 +13,7 @@ public:
         this->light = _light;
         this->motion = m;
         this->R = r;
+        this->diffusive = true;
         };
     Intersection intersect(const Ray& r){
         //treat motion
