@@ -76,9 +76,8 @@ Polygon polygon_clipping(Polygon SubjectPolygon, Polygon clipPolygon){
 }
 
 Polygon clip_bissectors(Polygon SubjectPolygon,int k, Polygon dataset){
-    // Polygon SubjectPolygon = get_bounding_box(dataset);
     Vector Pi = dataset.vertices[k];
-    Pi.print_vector();
+    // Pi.print_vector();
     Polygon* outPolygon = new Polygon();
     for(int j=0;j<dataset.vertices.size();j++){
         if(k==j) continue;
@@ -111,7 +110,17 @@ Polygon clip_bissectors(Polygon SubjectPolygon,int k, Polygon dataset){
                 }
         }
         SubjectPolygon = *outPolygon;
-        save_svg({SubjectPolygon},"tmp" + std::to_string(j)+".svg");
+        // save_svg({SubjectPolygon},"tmp" + std::to_string(j)+".svg"); // testing
     }
     return *outPolygon;
+}
+
+std::vector<Polygon> Voronoi_PLE(Polygon dataset){
+    Polygon SubjectPolygon = get_bounding_box(dataset);
+    // save_svg({SubjectPolygon},"image_box.svg"); //draw box
+    std::vector<Polygon> P;
+    for(int i=0;i<dataset.vertices.size();i++){
+        P.push_back(clip_bissectors(SubjectPolygon,i,dataset));
+    }
+    return P;
 }
