@@ -21,7 +21,7 @@ public:
 
     void tranform_weights(const lbfgsfloatval_t *x){
         for(int i=0;i<this->M;i++){
-            this->final_weights[i] = (double) x[this->N]/this->M;
+            this->final_weights[i] = x[this->N];
         }
         for(int i=this->M;i<this->M+this->N;i++){
             this->final_weights[i] = x[i-this->M];
@@ -46,11 +46,10 @@ public:
     //transformed weigths 
     this->final_weights =(double*) malloc((this->N+this->M)*sizeof(double));
     //Initial circle of water
-    double area_water = (double) this->N / (this->N+this->M);
-    Vector C(0.5,0.5,0.);  double R = sqrt(area_water/M_PI);
-    // double area_water = M_PI * R*R;
+    double area_water = (double)  this->N / (this->N+this->M);
+    Vector C(0.5,0.5,0.);  
+    double R = sqrt(area_water/M_PI);
     this->mass_water = area_water/this->N;
-    // this->mass_air = (1. - area_water)/this->M;
 
     //Initialize air cells
     // double total = 0;
@@ -70,12 +69,11 @@ public:
         Vector tmp(x,y,0); tmp+= C; tmp.set_is_liquid(true);
         //Water cells start from the index M
         this->dataset.vertices.push_back(tmp);
-        this->lambdas[i] = this->mass_water;
+        // this->lambdas[i] = this->mass_water;
         //Note we have a correspondance dataset[M] -> lamdas[0], ... ,dataset[M+N-1] -> lamdas[N-1]
         
     }
-    this->lambdas[this->N] = (1. - area_water);
-    this->mass_air =(double) this->lambdas[this->N]/this->M;
+    this->mass_air = 1. - area_water;
     std::cout << "Initialization is done!" << std::endl;
     //Normalize
     // for(int i=0;i<this->M;i++){
@@ -109,11 +107,13 @@ public:
     }
 
     /* Initialize the variables. */
-    for (int i = 0;i < (this->N + 1);i ++) {
+    for (int i = 0;i < (this->N);i ++) {
         // m_x[i] = 1./((double)N);
         // m_x[i] = this->lambdas[i];
-        m_x[i] = 1.;
+        m_x[i] = this->mass_water;
     }
+    m_x[this->N] = this->mass_air;
+
     lbfgs_parameter_t param;
     lbfgs_parameter_init(&param);
 
@@ -133,10 +133,13 @@ public:
 
     this->tranform_weights(m_x);
 
-    std::cout << "Creating Diagram" << std::endl; this->scene = Create_diagram(this->dataset,this->final_weights); std::cout << "Finished" << std::endl;
-    this->color_scene(); save_svg(this->scene,"first_frame.svg",this->dataset,this->color);
+    std::cout << "Creating Diagram" << std::endl; 
+    this->scene = Create_diagram(this->dataset,this->final_weights); std::cout << "Finished" << std::endl;
+    this->color_scene(); 
+    save_svg(this->scene,"first_frame.svg",this->dataset,this->color);
 
-    return ret;
+    // return ret;
+    return 0;
     }
 
 protected:
@@ -149,11 +152,11 @@ protected:
     //Compute G and Delta G
     lbfgsfloatval_t fx = 0.0;
     this->tranform_weights(x);
-    double AreaAir = 0.;
+    lbfgsfloatval_t AreaAir = 0.;
+    lbfgsfloatval_t Integral_Air = 0.;
     #pragma omp parallel for
     for(int i=0;i<this->dataset.vertices.size();i++){
         Vector Pi = this->dataset.vertices[i];
-        
         Polygon cell = PowerCell_of_i(this->SubjectPolygon,i,this->dataset,this->final_weights); double Area = cell.Area2D();
         
         lbfgsfloatval_t tmp = 0.0;
@@ -170,23 +173,27 @@ protected:
                                     + 6.* Pi.norm_squared() );
         }
         tmp = std::abs(tmp)/12.;
-        // fx += this->f* (tmp  - x[i] * cell.Area2D()) + this->lambdas[i]* x[i];
+
+        // fx += this->lambdas[i]* x[i] -this->f* x[i] * Area;
+
         //computing Delta g(W) along i;
-        // g[i] = this->f*cell.Area2D()  - this->lambdas[i] ;
-        fx += this->f * tmp;
+        // g[i] = this->f*Area  - this->lambdas[i] ;
+
+        
         //The above is common to both cases,It is different when the weight is involved
         if(i>=this->M){
             int index = i - this->M; //we are dealing with a water molecule
-            g[index] = this->f * Area - this->lambdas[index];
-            fx +=  this->lambdas[index] * x[index] - this->f * Area * x[index];
+            fx +=  this->f * tmp+ this->mass_water * x[index] - this->f * Area * x[index];
+            g[index] = this->f * Area - this->mass_water;
         } 
         else{
             AreaAir += Area;
+            Integral_Air += tmp;
         }
     }
     //Contribution Air
-    fx += this->lambdas[this->N]*x[this->N] - x[this->N] * this->f * AreaAir;
-    g[this->N] = this->f * AreaAir - this->lambdas[this->N];
+    fx += this->mass_air * x[this->N] +this->f * (Integral_Air - x[this->N]  * AreaAir);
+    g[this->N] = this->f * AreaAir - this->mass_air;
     
     fx *= -1.;
     return fx;

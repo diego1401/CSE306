@@ -107,31 +107,46 @@ std::vector<Polygon> Create_diagram(Polygon dataset,double* weights){
 
 std::vector<Polygon> Centroidal_Voronoi_Tesselation(Polygon& dataset){
     Polygon SubjectPolygon = get_bounding_box();
-    int N = 3;
+    int N = 20;
     int n = dataset.vertices.size();
     double* weights =(double*) malloc(n*sizeof(double)); // have all weights equal to go back
     //to the previous case
     for (int i=0;i<n;i++){ weights[i] = 1.;}
 
     std::vector<Polygon> Output;
-    for(int j=0;j<N;j++){
-        std::vector<Polygon> P;
-        // #pragma omp parallel for
-        for(int i=0;i<dataset.vertices.size();i++){
-            P.push_back(PowerCell_of_i(SubjectPolygon,i,dataset,weights));
+    //init
+    Polygon tmp;
+    for(int i=0;i<n;i++){
+            Output.push_back(tmp);
         }
-
+    Polygon*P = (Polygon*) malloc(n*sizeof(Polygon));
+    for(int j=0;j<N;j++){
+        std::cout << "LLoyd iteration Nº" << j+1 << std::endl;
+        
+        #pragma omp parallel for
+        for(int i=0;i<n;i++){
+            P[i] = PowerCell_of_i(SubjectPolygon,i,dataset,weights);
+        }
+        // std::cout << "filled P" << std::endl;
         // std::vector<Vector> new_P;
         bool is_liquid;
-        for(int i=0;i<P.size();i++){
+        #pragma omp parallel for
+        for(int i=0;i<n;i++){
             // new_P.push_back(P[i].Centroid2d());
             is_liquid = dataset.vertices[i].ret_is_liquid();
             dataset.vertices[i] = P[i].Centroid2d();
             dataset.vertices[i].set_is_liquid(is_liquid);
         }
-        Output = P;
+        // std::cout << "fixed centroids" << std::endl;
+        #pragma omp parallel for
+        for(int i=0;i<n;i++){
+            Output[i] = P[i];
+        }
+        // Output = P;
+        
         }
     if(weights!=NULL) free(weights);
+    if(P != NULL) free(P);
     return Output;
 
 }
