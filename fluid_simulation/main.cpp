@@ -13,17 +13,40 @@ protected:
 
 public:
     Polygon dataset; double f; Polygon SubjectPolygon; int M,N; //Air and Water Molecules
+    std::vector<Vector> velocities;
     double* lambdas;
     double mass_water,mass_air;
     double* final_weights;
+    // double eps = 0.004;
+    double eps_inv_sq = 1./(0.004*0.004);
+    double dt = 0.002;
+    double mass = 200;
+    Vector g = Vector(0.,-9.8,0.);
     std::vector<Polygon> scene;
     std::string color = "blue";
+
+    void GMS_one_step(){
+        // X is dataset[M,...M+N]
+        // v is velocities
+        //Prev opt W are final_weights
+        this->run();
+        Vector Fi,Fi_spring;
+        for(int i=this->M;i<this->M+this->N;i++){
+            Polygon cell = this->scene[i];
+            Vector Xi = this->dataset.vertices[i];
+            Fi_spring = this->eps_inv_sq * (cell.Centroid2d() - Xi);
+            Fi = Fi_spring + mass* g;
+            this->dataset.vertices[i] += dt * this->velocities[i];
+            this->velocities[i] += this->dt/this->mass * Fi;
+        }
+
+    }
 
     void tranform_weights(const lbfgsfloatval_t *x){
         for(int i=0;i<this->M;i++){
             this->final_weights[i] = x[this->N];
         }
-        for(int i=this->M;i<this->M+this->N;i++){
+        for(int i=this->M;i<(this->M+this->N);i++){
             this->final_weights[i] = x[i-this->M];
         }
     }
@@ -46,9 +69,11 @@ public:
     //transformed weigths 
     this->final_weights =(double*) malloc((this->N+this->M)*sizeof(double));
     //Initial circle of water
-    double area_water = (double)  this->N / (this->N+this->M);
+    // double area_water = (double)  this->N / (this->N+this->M);
+    double R = 0.3;
+    double area_water = M_PI *R*R;
     Vector C(0.5,0.5,0.);  
-    double R = sqrt(area_water/M_PI);
+    
     this->mass_water = area_water/this->N;
 
     //Initialize air cells
@@ -75,6 +100,11 @@ public:
     }
     this->mass_air = 1. - area_water;
     std::cout << "Initialization is done!" << std::endl;
+
+    //init final_weights
+    for(int i=0;i<this->N+this->M;i++){
+        this->final_weights[i] = 1.;
+    }
     //Normalize
     // for(int i=0;i<this->M;i++){
     //     this->lambdas[i] /= total;
@@ -117,7 +147,7 @@ public:
     lbfgs_parameter_t param;
     lbfgs_parameter_init(&param);
 
-    param.max_iterations = 100;
+    param.max_iterations = 300;
 
     /*
         Start the L-BFGS optimization; this will invoke the callback functions
@@ -181,7 +211,7 @@ protected:
 
         
         //The above is common to both cases,It is different when the weight is involved
-        if(i>=this->M){
+        if(i>(this->M-1)){
             int index = i - this->M; //we are dealing with a water molecule
             fx +=  this->f * tmp+ this->mass_water * x[index] - this->f * Area * x[index];
             g[index] = this->f * Area - this->mass_water;
@@ -213,6 +243,7 @@ protected:
         return 0;
     }
 };
+
 
 int main(){
     // Vector e1(0.2,0.2,0),e2(0.8,0.2,0),e3(0.1,0.7,0),e4(0.9,0.6,0);

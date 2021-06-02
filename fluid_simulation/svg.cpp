@@ -44,15 +44,15 @@ public:
 void save_svg(const std::vector<Polygon> &polygons, std::string filename,Polygon polygon, std::string fillcol) {
 		FILE* f = fopen(filename.c_str(), "w+"); 
 		fprintf(f, "<svg xmlns = \"http://www.w3.org/2000/svg\" width = \"1000\" height = \"1000\">\n");
-		for (int j = 0; j < polygon.vertices.size(); j++) {
-			if(polygon.vertices[j].ret_is_liquid()){
-			fprintf(f, "<circle cx=\"%3.3f\" cy=\"%3.3f\" r=\"1\" stroke=\"black\" stroke-width=\"1\" fill = \"red\" />", (polygon.vertices[j][0]* 1000), (1000 - polygon.vertices[j][1] * 1000));
-			}
-			else{
-            fprintf(f, "<circle cx=\"%3.3f\" cy=\"%3.3f\" r=\"1\" stroke=\"black\" stroke-width=\"1\" fill = \"black\" />", (polygon.vertices[j][0]* 1000), (1000 - polygon.vertices[j][1] * 1000));
-			}
+		// for (int j = 0; j < polygon.vertices.size(); j++) {
+		// 	if(polygon.vertices[j].ret_is_liquid()){
+		// 	fprintf(f, "<circle cx=\"%3.3f\" cy=\"%3.3f\" r=\"1\" stroke=\"black\" stroke-width=\"1\" fill = \"red\" />", (polygon.vertices[j][0]* 1000), (1000 - polygon.vertices[j][1] * 1000));
+		// 	}
+		// 	else{
+        //     fprintf(f, "<circle cx=\"%3.3f\" cy=\"%3.3f\" r=\"1\" stroke=\"black\" stroke-width=\"1\" fill = \"black\" />", (polygon.vertices[j][0]* 1000), (1000 - polygon.vertices[j][1] * 1000));
+		// 	}
 
-        	}
+        // 	}
         for (int i=0; i<polygons.size(); i++) {
 		    fprintf(f, "<g>\n");
 		    fprintf(f, "<polygon points = \""); 
