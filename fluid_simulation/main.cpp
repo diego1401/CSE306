@@ -3,7 +3,7 @@
 #include "L-BFGS/lbfgs.h"
 #include <assert.h>  
 #include <random>
-
+#include <cmath>
 
 
 class objective_function
@@ -17,11 +17,10 @@ public:
     double* lambdas;
     double mass_water,mass_air;
     double* final_weights;
+    std::string filename;
+    int frame_id = 0;
     // double eps = 0.004;
-    double eps_inv_sq = 1./(0.004*0.004);
-    double dt = 0.002;
-    double mass = 200;
-    Vector g = Vector(0.,-9.8,0.);
+    double eps_inv_sq = 1./(0.004*0.004);double dt = 0.002; double mass = 200; Vector g = Vector(0.,-9.8,0.);
     std::vector<Polygon> scene;
     std::string color = "blue";
 
@@ -29,25 +28,33 @@ public:
         // X is dataset[M,...M+N]
         // v is velocities
         //Prev opt W are final_weights
-        this->run();
+        // int ret = this->run();
         Vector Fi,Fi_spring;
+        std::cout << "Updating physical quantities" << std::endl;
+        this->velocities[this->M+1].print_vector();
         for(int i=this->M;i<this->M+this->N;i++){
+            // std::cout << "Cell" << std::endl;
             Polygon cell = this->scene[i];
+            // std::cout << "Xi" << std::endl;
             Vector Xi = this->dataset.vertices[i];
+            // std::cout << "ok" << std::endl;
             Fi_spring = this->eps_inv_sq * (cell.Centroid2d() - Xi);
-            Fi = Fi_spring + mass* g;
+            Fi = Fi_spring + this->mass* this->g;
+            // Fi.print_vector();
             this->dataset.vertices[i] += dt * this->velocities[i];
-            this->velocities[i] += this->dt/this->mass * Fi;
+            this->velocities[i] += (this->dt/this->mass) * Fi;
         }
 
     }
 
     void tranform_weights(const lbfgsfloatval_t *x){
-        for(int i=0;i<this->M;i++){
-            this->final_weights[i] = x[this->N];
-        }
-        for(int i=this->M;i<(this->M+this->N);i++){
-            this->final_weights[i] = x[i-this->M];
+        for(int i=0;i<this->M+this->N;i++){
+            if(i>(this->M-1)){
+                this->final_weights[i] = x[i-this->M];
+            }
+            else{
+                this->final_weights[i] = x[this->N];
+            }
         }
     }
 
@@ -62,61 +69,62 @@ public:
         }
     }
     
-    objective_function(int _M,int _N,double _f,double sig) : m_x(NULL){
+    objective_function(std::string _filename,int _M,int _N,double _f,double sig) : m_x(NULL){
     std::cout << "Initialization is starts!" << std::endl;
+    this->filename = _filename;
     this->f = _f; this->M = _M; this->N = _N; this->SubjectPolygon = get_bounding_box();
     this->lambdas =(double*) malloc((N+1)*sizeof(double));
     //transformed weigths 
     this->final_weights =(double*) malloc((this->N+this->M)*sizeof(double));
     //Initial circle of water
-    // double area_water = (double)  this->N / (this->N+this->M);
-    double R = 0.3;
-    double area_water = M_PI *R*R;
-    Vector C(0.5,0.5,0.);  
+    double R = 0.3; double area_water = M_PI *R*R; Vector C(0.5,0.5,0.);  
     
     this->mass_water = area_water/this->N;
 
     //Initialize air cells
     // double total = 0;
     for(int i =0;i< M;i++){
-        Vector tmp((double) rand()/RAND_MAX,(double) rand()/RAND_MAX,0.);
+        double x = (double) rand()/RAND_MAX;
+        double y = (double) rand()/RAND_MAX;
+        Vector tmp(x,y,0.);
         // this->lambdas[i] = exp(-(tmp-C).norm_squared()/(sig)); total += this->lambdas[i]; 
         this->dataset.vertices.push_back(tmp);
     }
+    
     //Lloyd iterations over the Air cells
     Centroidal_Voronoi_Tesselation(this->dataset);
     
     //Init Water cells
-    for(int i =0;i<this->N;i++){
+    for(int i =this->M;i<this->N+this->M;i++){
         double r = (double) rand()/RAND_MAX; r = R*sqrt(r);
         double theta = (double) rand()/RAND_MAX * 2*M_PI;
         double x = r * cos(theta); double y = r*sin(theta);
         Vector tmp(x,y,0); tmp+= C; tmp.set_is_liquid(true);
         //Water cells start from the index M
         this->dataset.vertices.push_back(tmp);
-        // this->lambdas[i] = this->mass_water;
-        //Note we have a correspondance dataset[M] -> lamdas[0], ... ,dataset[M+N-1] -> lamdas[N-1]
+        //Note we have a correspondance dataset[M] -> weight[0], ... ,dataset[M+N-1] -> weight[N-1]
         
     }
+
     this->mass_air = 1. - area_water;
     std::cout << "Initialization is done!" << std::endl;
 
-    //init final_weights
+    //init final_weights init velocities
     for(int i=0;i<this->N+this->M;i++){
         this->final_weights[i] = 1.;
+        Vector tmp(0.,0.,0.);
+        this->velocities.push_back(tmp);
     }
     //Normalize
     // for(int i=0;i<this->M;i++){
     //     this->lambdas[i] /= total;
     // }
     
+    
     }
 
     virtual ~objective_function(){
-        if (m_x != NULL) {
-            lbfgs_free(m_x);
-            m_x = NULL;
-        }
+        
         if(this->lambdas!= NULL){
             free(this->lambdas);
          }
@@ -125,10 +133,11 @@ public:
         } 
     }
 
-    int run()
+    int run(int frames)
     {
+        std::cout<< "running" << std::endl;
         lbfgsfloatval_t fx;
-    lbfgsfloatval_t *m_x = lbfgs_malloc(this->N + 1);
+        lbfgsfloatval_t *m_x = lbfgs_malloc(this->N + 1);
     
 
     if (m_x == NULL) {
@@ -137,38 +146,45 @@ public:
     }
 
     /* Initialize the variables. */
-    for (int i = 0;i < (this->N);i ++) {
+    for (int i = this->M;i < (this->M+this->N);i ++) {
         // m_x[i] = 1./((double)N);
         // m_x[i] = this->lambdas[i];
-        m_x[i] = this->mass_water;
+        m_x[i] = this->final_weights[i];
     }
-    m_x[this->N] = this->mass_air;
+    m_x[this->N] = this->final_weights[0];
 
     lbfgs_parameter_t param;
     lbfgs_parameter_init(&param);
 
-    param.max_iterations = 300;
-
-    /*
+    param.max_iterations = 3000;
+    for(int i=0;i<frames;i++){
+        /*
         Start the L-BFGS optimization; this will invoke the callback functions
         evaluate() and progress() when necessary.
-    */
-    int ret = lbfgs(this->N+1, m_x, &fx, _evaluate, _progress, this, &param);
+        */
+        int ret = lbfgs(this->N+1, m_x, &fx, _evaluate, _progress, this, &param);
 
-    /* Report the result. */
+        /* Report the result. */
 
-    printf("L-BFGS optimization terminated with status code = %d\n", ret);
-    std::cout << lbfgs_strerror(ret) << std::endl;
-    printf("  fx = %f, x[0] = %f, x[1] = %f\n", fx, m_x[0], m_x[1]);
+        printf("L-BFGS optimization terminated with status code = %d\n", ret);
+        std::cout << lbfgs_strerror(ret) << std::endl;
+        printf("  fx = %f, x[0] = %f, x[1] = %f\n", fx, m_x[0], m_x[1]);
 
-    this->tranform_weights(m_x);
-
-    std::cout << "Creating Diagram" << std::endl; 
-    this->scene = Create_diagram(this->dataset,this->final_weights); std::cout << "Finished" << std::endl;
-    this->color_scene(); 
-    save_svg(this->scene,"first_frame.svg",this->dataset,this->color);
-
-    // return ret;
+        this->tranform_weights(m_x);
+        this->scene = Create_diagram(this->dataset,this->final_weights); this->color_scene(); 
+        // save_svg(this->scene,"first_frame.svg",this->dataset,this->color);
+        save_frame(this->scene,this->filename,this->M,this->frame_id);
+        
+        this->frame_id++;
+        std::cout << "Frame" << this->frame_id << "saved" << std::endl;
+        this->GMS_one_step();
+    }
+   
+    if (m_x != NULL) {
+            lbfgs_free(m_x);
+            m_x = NULL;
+    }
+    std::cout << "Freed" << std::endl;
     return 0;
     }
 
@@ -184,10 +200,13 @@ protected:
     this->tranform_weights(x);
     lbfgsfloatval_t AreaAir = 0.;
     lbfgsfloatval_t Integral_Air = 0.;
-    #pragma omp parallel for
-    for(int i=0;i<this->dataset.vertices.size();i++){
+    std::vector<Polygon> PowerCells = Create_diagram(this->dataset,this->final_weights);
+    // #pragma omp parallel for
+    for(int i=0;i<this->N+this->M;i++){
         Vector Pi = this->dataset.vertices[i];
-        Polygon cell = PowerCell_of_i(this->SubjectPolygon,i,this->dataset,this->final_weights); double Area = cell.Area2D();
+        // Polygon cell = PowerCell_of_i(this->SubjectPolygon,i,this->dataset,this->final_weights); 
+        Polygon cell = PowerCells[i];
+        double Area = cell.Area2D();
         
         lbfgsfloatval_t tmp = 0.0;
         //computing the i-th term of the sum for g(W)
@@ -199,10 +218,11 @@ protected:
 
             tmp += (xk1*yk -xk*yk1) * (xk1*xk1 + xk1*xk + xk*xk
                                       +yk1*yk1 + yk1*yk + yk*yk
-                                    -4.* (Pi[0]*(xk1+xk) + Pi[1]* (yk1 + yk))
+                                    - 4.* (Pi[0]*(xk1+xk) + Pi[1]* (yk1 + yk))
                                     + 6.* Pi.norm_squared() );
+                                    // + 6.* (Pi[0] *Pi[0] + Pi[1]*Pi[1]));
         }
-        tmp = std::abs(tmp)/12.;
+        tmp = std::abs(tmp);
 
         // fx += this->lambdas[i]* x[i] -this->f* x[i] * Area;
 
@@ -213,16 +233,22 @@ protected:
         //The above is common to both cases,It is different when the weight is involved
         if(i>(this->M-1)){
             int index = i - this->M; //we are dealing with a water molecule
-            fx +=  this->f * tmp+ this->mass_water * x[index] - this->f * Area * x[index];
+            // assert(0<= index && index < this->N && Pi.ret_is_liquid());
+            fx +=  this->f  *(tmp/12. - x[index]* Area) + this->mass_water * x[index];
             g[index] = this->f * Area - this->mass_water;
         } 
         else{
+            // assert(0<= i && i < this->M && !Pi.ret_is_liquid());
             AreaAir += Area;
             Integral_Air += tmp;
         }
     }
     //Contribution Air
-    fx += this->mass_air * x[this->N] +this->f * (Integral_Air - x[this->N]  * AreaAir);
+    // std::cout << "Integral Air=" << Integral_Air << std::endl;
+    // std::cout << "Area Air=" << AreaAir << std::endl;
+    // std::cout << "fx=" << fx << std::endl;
+    Integral_Air /= 12.;
+    fx += this->mass_air * x[this->N] + this->f * (Integral_Air - x[this->N] * AreaAir);
     g[this->N] = this->f * AreaAir - this->mass_air;
     
     fx *= -1.;
@@ -266,10 +292,8 @@ int main(){
     // save_svg(Create_diagram(dataset,weights),"image_voronoi.svg",dataset);
 
     
-    int M = 2500;
-    int N = 700;
-    objective_function obj(M,N,1.,0.02);
-    obj.run();
-    
+    int M = 800; int N = 100;
+    objective_function obj("frames/simulation",M,N,1.,0.02);
+    obj.run(1000);
     return 0;
 }
