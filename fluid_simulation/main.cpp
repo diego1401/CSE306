@@ -80,7 +80,8 @@ public:
     double R = 0.3; double area_water = M_PI *R*R; Vector C(0.5,0.5,0.);  
     
     this->mass_water = area_water/this->N;
-
+    std::vector<Vector> tmp(this->M+this->N);
+    this->dataset.vertices = tmp;
     //Initialize air cells
     // double total = 0;
     for(int i =0;i< M;i++){
@@ -88,7 +89,7 @@ public:
         double y = (double) rand()/RAND_MAX;
         Vector tmp(x,y,0.);
         // this->lambdas[i] = exp(-(tmp-C).norm_squared()/(sig)); total += this->lambdas[i]; 
-        this->dataset.vertices.push_back(tmp);
+        this->dataset.vertices[i] = tmp;
     }
     
     //Lloyd iterations over the Air cells
@@ -101,19 +102,20 @@ public:
         double x = r * cos(theta); double y = r*sin(theta);
         Vector tmp(x,y,0); tmp+= C; tmp.set_is_liquid(true);
         //Water cells start from the index M
-        this->dataset.vertices.push_back(tmp);
+        this->dataset.vertices[i] = tmp;
         //Note we have a correspondance dataset[M] -> weight[0], ... ,dataset[M+N-1] -> weight[N-1]
         
     }
 
     this->mass_air = 1. - area_water;
     std::cout << "Initialization is done!" << std::endl;
-
+    std::vector<Vector> tmp(this->N+this->M);
+    this->velocities = tmp;
     //init final_weights init velocities
     for(int i=0;i<this->N+this->M;i++){
         this->final_weights[i] = 1.;
         Vector tmp(0.,0.,0.);
-        this->velocities.push_back(tmp);
+        this->velocities[i] = tmp;
     }
     //Normalize
     // for(int i=0;i<this->M;i++){
