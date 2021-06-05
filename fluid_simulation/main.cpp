@@ -80,8 +80,8 @@ public:
     double R = 0.3; double area_water = M_PI *R*R; Vector C(0.5,0.5,0.);  
     
     this->mass_water = area_water/this->N;
-    std::vector<Vector> tmp(this->M+this->N);
-    this->dataset.vertices = tmp;
+    std::vector<Vector> data_vec(this->M+this->N);
+    Polygon tmp_data(data_vec);
     //Initialize air cells
     // double total = 0;
     for(int i =0;i< M;i++){
@@ -89,7 +89,8 @@ public:
         double y = (double) rand()/RAND_MAX;
         Vector tmp(x,y,0.);
         // this->lambdas[i] = exp(-(tmp-C).norm_squared()/(sig)); total += this->lambdas[i]; 
-        this->dataset.vertices[i] = tmp;
+        // this->dataset.vertices.push_back(tmp);
+        tmp_data.vertices[i] = tmp;
     }
     
     //Lloyd iterations over the Air cells
@@ -102,21 +103,25 @@ public:
         double x = r * cos(theta); double y = r*sin(theta);
         Vector tmp(x,y,0); tmp+= C; tmp.set_is_liquid(true);
         //Water cells start from the index M
-        this->dataset.vertices[i] = tmp;
+        // this->dataset.vertices.push_back(tmp);
+        tmp_data.vertices[i] = tmp;
         //Note we have a correspondance dataset[M] -> weight[0], ... ,dataset[M+N-1] -> weight[N-1]
         
     }
 
+    this->dataset = tmp_data;
+
     this->mass_air = 1. - area_water;
     std::cout << "Initialization is done!" << std::endl;
-    std::vector<Vector> tmp(this->N+this->M);
-    this->velocities = tmp;
+
+    std::vector<Vector> tmp_vel(this->N+this->M);
     //init final_weights init velocities
     for(int i=0;i<this->N+this->M;i++){
         this->final_weights[i] = 1.;
         Vector tmp(0.,0.,0.);
-        this->velocities[i] = tmp;
+        tmp_vel[i] = tmp;
     }
+    this->velocities = tmp_vel;
     //Normalize
     // for(int i=0;i<this->M;i++){
     //     this->lambdas[i] /= total;
@@ -290,7 +295,7 @@ int main(){
     // save_svg(Create_diagram(dataset,weights),"image_voronoi.svg",dataset);
 
     
-    int M = 800; int N = 100;
+    int M = 2500; int N = 700;
     objective_function obj("frames/simulation",M,N,1.,0.02);
     obj.run(1000);
     return 0;
