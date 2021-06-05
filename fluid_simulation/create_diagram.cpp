@@ -112,16 +112,13 @@ std::vector<Polygon> Centroidal_Voronoi_Tesselation(Polygon& dataset){
     int N = 100;
     int n = dataset.vertices.size();
     double* weights =(double*) malloc(n*sizeof(double)); // have all weights equal to go back
+    // Polygon*P = (Polygon*) malloc(n*sizeof(Polygon));
+    std::vector<Polygon> P(n);
     //to the previous case
     for (int i=0;i<n;i++){ weights[i] = 1.;}
 
-    std::vector<Polygon> Output;
-    //init
-    Polygon tmp;
-    for(int i=0;i<n;i++){
-            Output.push_back(tmp);
-        }
-    Polygon*P = (Polygon*) malloc(n*sizeof(Polygon));
+    std::vector<Polygon> Output(n);
+    
     for(int j=0;j<N;j++){
         std::cout << "LLoyd iteration Nº" << j+1 << std::endl;
         
@@ -145,8 +142,7 @@ std::vector<Polygon> Centroidal_Voronoi_Tesselation(Polygon& dataset){
         // Output = P;
         
         }
-    if(weights!=NULL) free(weights);
-    if(P != NULL) free(P);
+    free(weights);
     return Output;
 
 }

@@ -125,19 +125,15 @@ public:
 
     virtual ~objective_function(){
         
-        if(this->lambdas!= NULL){
-            free(this->lambdas);
-         }
-        if(this->final_weights!=NULL){
-            free(this->final_weights);
-        } 
+        free(this->lambdas);
+        free(this->final_weights);
     }
 
     int run(int frames)
     {
-        std::cout<< "running" << std::endl;
-        lbfgsfloatval_t fx;
-        lbfgsfloatval_t *m_x = lbfgs_malloc(this->N + 1);
+    std::cout<< "running" << std::endl;
+    lbfgsfloatval_t fx;
+    lbfgsfloatval_t *m_x = lbfgs_malloc(this->N + 1);
     
 
     if (m_x == NULL) {
