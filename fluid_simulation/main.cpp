@@ -80,6 +80,8 @@ public:
     double R = 0.3; double area_water = M_PI *R*R; Vector C(0.5,0.5,0.);  
     
     this->mass_water = area_water/this->N;
+    std::vector<Vector> data_vec_air(this->M);
+    Polygon tmp_data(data_vec_air);
     //Initialize air cells
     // double total = 0;
     for(int i =0;i< M;i++){
@@ -87,12 +89,17 @@ public:
         double y = (double) rand()/RAND_MAX;
         Vector tmp(x,y,0.);
         // this->lambdas[i] = exp(-(tmp-C).norm_squared()/(sig)); total += this->lambdas[i]; 
-        this->dataset.vertices.push_back(tmp);
-        // tmp_data.vertices[i] = tmp;
+        // this->dataset.vertices.push_back(tmp);
+        tmp_data.vertices[i] = tmp;
     }
     
     //Lloyd iterations over the Air cells
-    Centroidal_Voronoi_Tesselation(this->dataset);
+    Centroidal_Voronoi_Tesselation(tmp_data);
+    std::vector<Vector> data_vec(this->M+this->N);
+    Polygon data(data_vec);
+    for(int i=0;i<M;i++){
+        data.vertices[i] = tmp_data.vertices[i];
+    }
     
     //Init Water cells
     for(int i =this->M;i<this->N+this->M;i++){
@@ -101,12 +108,13 @@ public:
         double x = r * cos(theta); double y = r*sin(theta);
         Vector tmp(x,y,0); tmp+= C; tmp.set_is_liquid(true);
         //Water cells start from the index M
-        this->dataset.vertices.push_back(tmp);
-        // tmp_data.vertices[i] = tmp;
+        // this->dataset.vertices.push_back(tmp);
+        data.vertices[i] = tmp;
         //Note we have a correspondance dataset[M] -> weight[0], ... ,dataset[M+N-1] -> weight[N-1]
         
     }
 
+    this->dataset = data;
 
     this->mass_air = 1. - area_water;
     std::cout << "Initialization is done!" << std::endl;
