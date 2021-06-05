@@ -1,8 +1,8 @@
-CXX = g++-10
+CXX = g++
 OBJECTS = main.o 
-FLAGS = -g -O3 -fopenmp -lpthread
+FLAGS = -std=c++11 -g -O3 -fopenmp -lpthread
 
-exec:  $(OBJECTS)
+exec:
 	$(CXX) $(FLAGS) L-BFGS/lbfgs.c main.cpp -o exec 
 	
 clean :
