@@ -82,9 +82,17 @@ public :
     const double& operator [] (int i) const { return coords [i] ; } 
     double& operator [](int i) { return coords[i]; }
 
+    void set_is_liquid(bool b){
+        this->is_liquid = b;
+    }
+    bool ret_is_liquid(){
+        return this->is_liquid;
+    }
+
 
 private :
     double coords[3];
+    bool is_liquid;
 };
 
 //CAREFUL: We need to declare the symmetry
