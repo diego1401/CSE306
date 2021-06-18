@@ -4,6 +4,8 @@
 #include <assert.h>  
 #include <random>
 #include <cmath>
+#include <chrono>
+using namespace std::chrono;
 
 
 class objective_function
@@ -15,6 +17,7 @@ public:
     Polygon dataset; double f; Polygon SubjectPolygon; int M,N; //Air and Water Molecules
     std::vector<Vector> velocities;
     double* lambdas;
+    int mode;
     double mass_water,mass_air;
     double* final_weights;
     std::string filename;
@@ -39,7 +42,8 @@ public:
             Vector Xi = this->dataset.vertices[i];
             // std::cout << "ok" << std::endl;
             Fi_spring = this->eps_inv_sq * (cell.Centroid2d() - Xi);
-            Fi = Fi_spring + this->mass* this->g;
+            // Fi = Fi_spring + this->mass* this->g;
+            Fi = Fi_spring;
             // Fi.print_vector();
             this->dataset.vertices[i] += dt * this->velocities[i];
             this->velocities[i] += (this->dt/this->mass) * Fi;
@@ -69,7 +73,19 @@ public:
         }
     }
     
-    objective_function(std::string _filename,int _M,int _N,double _f,double sig) : m_x(NULL){
+    objective_function(int _mode,std::string _filename,int _M,int _N,double _f,double sig) : m_x(NULL){
+    this->mode = _mode;
+    if(mode==0){
+        Voronoi_Diagram(_filename,_N);
+    }
+    if(mode==2){
+        fluid_simulation(_filename,_M,_N,_f,sig);
+    }
+    
+    }
+
+    void fluid_simulation(std::string _filename,int _M,int _N,double _f,double sig)
+    {
     std::cout << "Initialization is starts!" << std::endl;
     this->filename = _filename;
     this->f = _f; this->M = _M; this->N = _N; this->SubjectPolygon = get_bounding_box();
@@ -127,17 +143,11 @@ public:
         tmp_vel[i] = tmp;
     }
     this->velocities = tmp_vel;
-    //Normalize
-    // for(int i=0;i<this->M;i++){
-    //     this->lambdas[i] /= total;
-    // }
-    
     
     }
 
     virtual ~objective_function(){
-        
-        free(this->lambdas);
+        if(this->mode==1) free(this->lambdas);
         free(this->final_weights);
     }
 
@@ -180,7 +190,6 @@ public:
 
         this->tranform_weights(m_x);
         this->scene = Create_diagram(this->dataset,this->final_weights); this->color_scene(); 
-        // save_svg(this->scene,"first_frame.svg",this->dataset,this->color);
         save_frame(this->scene,this->filename,this->M,this->frame_id);
         
         this->frame_id++;
@@ -194,6 +203,21 @@ public:
     }
     std::cout << "Freed" << std::endl;
     return 0;
+    }
+
+    void Voronoi_Diagram(std::string _filename,int N){
+        this->filename = _filename;
+        this->final_weights =(double*) malloc((N)*sizeof(double));
+        std::vector<Vector> data(N); Polygon tmp_data(data);
+        for(int i =0;i< N;i++){
+        double x = (double) rand()/RAND_MAX; double y = (double) rand()/RAND_MAX;
+        Vector tmp(x,y,0.); tmp_data.vertices[i] = tmp;
+        this->final_weights[i] = 1.;
+        }
+        this->dataset = tmp_data;
+        std::vector<Polygon> PowerCells = Create_diagram(this->dataset,this->final_weights);
+        this->scene = Create_diagram(this->dataset,this->final_weights);
+        save_frame(this->scene,this->filename,N+1);
     }
 
 protected:
@@ -280,28 +304,24 @@ protected:
 
 
 int main(){
-    // Vector e1(0.2,0.2,0),e2(0.8,0.2,0),e3(0.1,0.7,0),e4(0.9,0.6,0);
-    // Polygon* P = new Polygon;
-    // P->vertices = {e1,e2,e4,e3};
-    // Vector f1(0.3,0.3,0),f2(0.8,0.3),f3(0.8,0.7),f4(0.3,0.7);
-    // Polygon* clip = new Polygon;
-    // clip->vertices = {f1,f2,f3,f4};
-    // save_svg({polygon_clipping(*P,*clip)},"image_clipped.svg","red");
-    // save_svg({*P,*clip},"image.svg");
 
-    // Vector e1(0.2,0.2,0),e2(0.8,0.2,0),e3(0.1,0.9,0),e4(0.9,0.6,0),
-    //        e5(0.55,0.5,0),e6(0.4,0.4,0);
-    // Polygon dataset({e1,e2,e3,e4,e5,e6});
-    // int N = dataset.vertices.size(); 
-    // double weights[N] = {1,1,1,1,1,1}; // have all weights equal to go back
-    
+    //Voronoi
+    int N = 100;
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    objective_function obj(0,"Voronoi_30k",0,N,0,0);
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
 
-    // save_svg({dataset},"polygon.svg");
-    // save_svg(Create_diagram(dataset,weights),"image_voronoi.svg",dataset);
+    //Fluid simulation
+    // int M = 250; int N = 70;
+    // objective_function obj(2,"frames_test/simulation",M,N,1.,0.02);
+    // obj.run(1000);
+
 
     
-    int M = 2500; int N = 700;
-    objective_function obj("frames2/simulation",M,N,1.,0.02);
-    obj.run(1000);
+    // d = Sequential_Dijkstra_Two_Queue(gra, 0);
+    
+    duration<double> time_span1 = duration_cast<duration<double> >(t2 - t1);
+    std::cout << "Time of exec: " << time_span1.count() << std::endl;
+
     return 0;
 }
