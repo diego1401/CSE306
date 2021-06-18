@@ -436,11 +436,6 @@ int main(){
     obj.run(1000);
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
 
-
-
-    
-    // d = Sequential_Dijkstra_Two_Queue(gra, 0);
-    
     duration<double> time_span1 = duration_cast<duration<double> >(t2 - t1);
     std::cout << "Time of exec: " << time_span1.count() << std::endl;
 

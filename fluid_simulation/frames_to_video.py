@@ -2,20 +2,15 @@ import cv2
 import numpy as np
 import os
 from os.path import isfile, join
-pathIn= './frames/'
-fps = 500
-pathOut = 'animation'+str(fps)+'fps.mp4'
+pathIn= './frames_test2/'
+fps = 60
+pathOut = 'test4'+str(fps)+'fps.mp4'
 
 frame_array = []
 files = [f for f in os.listdir(pathIn) if isfile(join(pathIn, f))]
 #for sorting the file names properly
-# print(files[0][10:-4])
+# files.remove(".DS_Store")
 files.sort(key = lambda x: int(x[10:-4]))
-# files.sort()
-# frame_array = []
-# files = [f for f in os.listdir(pathIn) if isfile(join(pathIn, f))]
-# #for sorting the file names properly
-# files.sort(key = lambda x: x[5:-4])
 for i in range(len(files)):
     filename=pathIn + files[i]
     #reading each files
