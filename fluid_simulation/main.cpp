@@ -78,6 +78,9 @@ public:
     if(mode==0){
         Voronoi_Diagram(_filename,_N);
     }
+    if(mode==1){
+        Power_Diagram(_filename,_N,_f,sig);
+    }
     if(mode==2){
         fluid_simulation(_filename,_M,_N,_f,sig);
     }
@@ -148,11 +151,58 @@ public:
 
     virtual ~objective_function(){
         if(this->mode==1) free(this->lambdas);
-        free(this->final_weights);
+        else{
+            free(this->final_weights);
+        }
+        
     }
 
     int run(int frames)
     {
+    if(mode==1){
+    std::cout<< "running" << std::endl;
+    lbfgsfloatval_t fx;
+    lbfgsfloatval_t *m_x = lbfgs_malloc(this->N);
+    
+
+    if (m_x == NULL) {
+        printf("ERROR: Failed to allocate a memory block for variables.\n");
+        return 1;
+    }
+
+    /* Initialize the variables. */
+    for (int i = 0;i < (this->N);i ++) {
+        m_x[i] = this->lambdas[i];
+    }
+
+    lbfgs_parameter_t param;
+    lbfgs_parameter_init(&param);
+
+    param.max_iterations = 3000;
+    /*
+    Start the L-BFGS optimization; this will invoke the callback functions
+    evaluate() and progress() when necessary.
+    */
+    int ret = lbfgs(this->N, m_x, &fx, _evaluate, _progress, this, &param);
+
+    /* Report the result. */
+
+    printf("L-BFGS optimization terminated with status code = %d\n", ret);
+    std::cout << lbfgs_strerror(ret) << std::endl;
+    printf("  fx = %f, x[0] = %f, x[1] = %f\n", fx, m_x[0], m_x[1]);
+
+    this->scene = Create_diagram(this->dataset,m_x);
+    save_frame(this->scene,this->filename,N);
+   
+    if (m_x != NULL) {
+            lbfgs_free(m_x);
+            m_x = NULL;
+    }
+    std::cout << "Freed" << std::endl;
+    return 0;
+
+    }
+    else{
     std::cout<< "running" << std::endl;
     lbfgsfloatval_t fx;
     lbfgsfloatval_t *m_x = lbfgs_malloc(this->N + 1);
@@ -165,8 +215,6 @@ public:
 
     /* Initialize the variables. */
     for (int i = this->M;i < (this->M+this->N);i ++) {
-        // m_x[i] = 1./((double)N);
-        // m_x[i] = this->lambdas[i];
         m_x[i] = this->final_weights[i];
     }
     m_x[this->N] = this->final_weights[0];
@@ -204,6 +252,7 @@ public:
     std::cout << "Freed" << std::endl;
     return 0;
     }
+    }
 
     void Voronoi_Diagram(std::string _filename,int N){
         this->filename = _filename;
@@ -220,6 +269,31 @@ public:
         save_frame(this->scene,this->filename,N+1);
     }
 
+    void Power_Diagram(std::string _filename,int _N,double _f,double sig){
+        std::cout << "Initialization is starts!" << std::endl;
+        this->filename = _filename;
+        this->f = _f; this->N = _N; this->SubjectPolygon = get_bounding_box();
+        this->lambdas =(double*) malloc((this->N)*sizeof(double));
+        
+        std::vector<Vector> data(this->N);
+        Polygon tmp_data(data);
+        Vector C(0.5,0.5,0); double total = 0;
+        for(int i =0;i< this->N;i++){
+            double x = (double) rand()/RAND_MAX;
+            double y = (double) rand()/RAND_MAX;
+            Vector tmp(x,y,0.);
+            this->lambdas[i] = exp(-(tmp-C).norm_squared()/(sig)); total += this->lambdas[i]; 
+            tmp_data.vertices[i] = tmp;
+        }
+
+        for(int i=0;i<this->N;i++){
+            this->lambdas[i] /= total;
+        }
+        this->dataset = tmp_data;
+
+        std::cout << "Initialization is done!" << std::endl;
+        }
+
 protected:
     static lbfgsfloatval_t _evaluate(void *instance,const lbfgsfloatval_t *x,lbfgsfloatval_t *g,const int n,const lbfgsfloatval_t step)
     {
@@ -227,13 +301,44 @@ protected:
     }
 
     lbfgsfloatval_t evaluate(const lbfgsfloatval_t *x,lbfgsfloatval_t *g,const int n,const lbfgsfloatval_t step){
+    if(this->mode==1){
+    //Compute G and Delta G
+    lbfgsfloatval_t fx = 0.0;
+    std::vector<Polygon> PowerCells = Create_diagram(this->dataset,(double*)x);
+    for(int i=0;i<this->N;i++){
+        Vector Pi = this->dataset.vertices[i];
+        Polygon cell = PowerCells[i];
+        double Area = cell.Area2D();
+        
+        lbfgsfloatval_t tmp = 0.0;
+        //computing the i-th term of the sum for g(W)
+        for(int k=0;k<cell.vertices.size();k++){
+            Vector A = cell.vertices[(k>0)?(k-1):cell.vertices.size()-1];
+            Vector B = cell.vertices[k]; 
+            double xk1=A[0];double xk=B[0];
+            double yk1=A[1];double yk=B[1];
+
+            tmp += (xk1*yk -xk*yk1) * (xk1*xk1 + xk1*xk + xk*xk
+                                      +yk1*yk1 + yk1*yk + yk*yk
+                                    - 4.* (Pi[0]*(xk1+xk) + Pi[1]* (yk1 + yk))
+                                    + 6.* Pi.norm_squared() );
+        }
+        tmp = std::abs(tmp)/12.;
+
+        fx += this->lambdas[i]*x[i] + this->f * (tmp - x[i]*Area);
+        //computing Delta g(W) along i;
+        g[i] = this->f*Area  - this->lambdas[i] ;
+    }
+    fx *= -1.;
+    return fx;
+    }
+    else{
     //Compute G and Delta G
     lbfgsfloatval_t fx = 0.0;
     this->tranform_weights(x);
     lbfgsfloatval_t AreaAir = 0.;
     lbfgsfloatval_t Integral_Air = 0.;
     std::vector<Polygon> PowerCells = Create_diagram(this->dataset,this->final_weights);
-    // #pragma omp parallel for
     for(int i=0;i<this->N+this->M;i++){
         Vector Pi = this->dataset.vertices[i];
         // Polygon cell = PowerCell_of_i(this->SubjectPolygon,i,this->dataset,this->final_weights); 
@@ -286,6 +391,8 @@ protected:
     fx *= -1.;
     return fx;
     }
+    }
+
 
     static int _progress(void *instance,const lbfgsfloatval_t *x,const lbfgsfloatval_t *g,const lbfgsfloatval_t fx,const lbfgsfloatval_t xnorm,
         const lbfgsfloatval_t gnorm,const lbfgsfloatval_t step,int n,int k,int ls){
@@ -306,9 +413,17 @@ protected:
 int main(){
 
     //Voronoi
-    int N = 100;
+    // int N = 100;
+    // high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    // objective_function obj(0,"Voronoi_30k",0,N,0,0);
+    // high_resolution_clock::time_point t2 = high_resolution_clock::now();
+
+
+    //Power Diagram
+    int N = 2000;
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
-    objective_function obj(0,"Voronoi_30k",0,N,0,0);
+    objective_function obj(1,"Power_Diagram",0,N,1,0.02);
+    obj.run(0);
     high_resolution_clock::time_point t2 = high_resolution_clock::now();
 
     //Fluid simulation
