@@ -263,6 +263,9 @@ public:
         Vector tmp(x,y,0.); tmp_data.vertices[i] = tmp;
         this->final_weights[i] = 1.;
         }
+        // //Lloyd iterations over the Air cells
+        // Centroidal_Voronoi_Tesselation(tmp_data);
+        
         this->dataset = tmp_data;
         std::vector<Polygon> PowerCells = Create_diagram(this->dataset,this->final_weights);
         this->scene = Create_diagram(this->dataset,this->final_weights);
@@ -413,23 +416,26 @@ protected:
 int main(){
 
     //Voronoi
-    // int N = 100;
+    // int N = 1000;
     // high_resolution_clock::time_point t1 = high_resolution_clock::now();
-    // objective_function obj(0,"Voronoi_30k",0,N,0,0);
+    // objective_function obj(0,"figures/Voronoi_1k_with_Lloyd",0,N,0,0);
     // high_resolution_clock::time_point t2 = high_resolution_clock::now();
 
 
     //Power Diagram
-    int N = 2000;
-    high_resolution_clock::time_point t1 = high_resolution_clock::now();
-    objective_function obj(1,"Power_Diagram",0,N,1,0.02);
-    obj.run(0);
-    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    // int N = 2000;
+    // high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    // objective_function obj(1,"Power_Diagram",0,N,1,0.02);
+    // obj.run(0);
+    // high_resolution_clock::time_point t2 = high_resolution_clock::now();
 
     //Fluid simulation
-    // int M = 250; int N = 70;
-    // objective_function obj(2,"frames_test/simulation",M,N,1.,0.02);
-    // obj.run(1000);
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    int M = 250; int N = 70;
+    objective_function obj(2,"frames_test2/simulation",M,N,1.,0.02);
+    obj.run(1000);
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+
 
 
     
