@@ -36,6 +36,10 @@ public:
 		return (A+B+C)*(1./3.);
 	}
 
+	int size(){
+		return this->indices.size();
+	}
+
 	void readOBJ(const char* obj) {
 
 		char matfile[255];
