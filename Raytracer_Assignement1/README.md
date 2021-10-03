@@ -1,6 +1,6 @@
 # Ray Tracer
 
-![](report/images/alpha10.png) ![](report/images/caustics.png)
+![](report/images/alpha10.png) ![](report/images/caustics.png 100x 100)
 
 The report for the assignment can be found in the report folder. Results as well as the features this projects provides can be found on it.
 
