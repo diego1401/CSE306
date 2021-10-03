@@ -1,4 +1,4 @@
-# CSE306 repository
+# Computer Graphics Projects
 A repository containing my Computer Graphics Projects. 
 
 - The folder RayTracer_Assignement1 contains the implementation and report of a Ray Tracer with several features done under the context of the CSE306 course at École Polytechnique. Grade 20/20 <br>
