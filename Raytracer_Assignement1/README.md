@@ -1,6 +1,7 @@
 # Ray Tracer
 
-![](report/images/alpha10.png) ![](report/images/caustics.png 100x100)
+![](report/images/alpha10.png) 
+<img scr = "report/images/caustics.png" width ="100" height="100">
 
 The report for the assignment can be found in the report folder. Results as well as the features this projects provides can be found on it.
 
