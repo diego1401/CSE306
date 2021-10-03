@@ -1,10 +1,11 @@
 # Ray Tracer
 
-![](report/images/caustics.png)
-![](report/images/alpha10.png) 
 
 
 The report for the assignment can be found in the report folder. Results as well as the features this projects provides can be found on it.
+
+![](report/images/caustics.png)
+![](report/images/alpha10.png) 
 
 How to run this code and change the scene:
 - Go to scene.cpp
