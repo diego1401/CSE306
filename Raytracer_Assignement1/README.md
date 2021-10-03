@@ -1,7 +1,6 @@
 # Ray Tracer
 
-<img scr="report/images/caustics.png" width ="100" height="100">
-
+![](report/images/caustics.png)
 ![](report/images/alpha10.png) 
 
 
